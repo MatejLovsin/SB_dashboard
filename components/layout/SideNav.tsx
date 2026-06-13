@@ -9,7 +9,7 @@ export function SideNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:flex md:flex-col">
+    <aside className="hidden w-60 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
       <div className="px-5 py-5">
         <span className="text-lg font-semibold tracking-tight">Dashboard</span>
       </div>

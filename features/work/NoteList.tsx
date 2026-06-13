@@ -27,7 +27,7 @@ function NoteRow({
   });
 
   return (
-    <div className="group rounded-2xl border border-border bg-card p-4 transition-colors hover:border-border/60">
+    <div className="group rounded-2xl border border-border bg-[var(--surface)] p-4 transition-colors hover:border-accent/30">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-semibold leading-snug">{note.title}</p>

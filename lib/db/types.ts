@@ -77,10 +77,22 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['notes']['Insert']>;
         Relationships: [];
       };
+      work_metrics: {
+        Row: { id: string; user_id: string; date: string; value: number; label: string; created_at: string };
+        Insert: { id?: string; user_id?: string; date: string; value: number; label?: string; created_at?: string };
+        Update: Partial<Database['public']['Tables']['work_metrics']['Insert']>;
+        Relationships: [];
+      };
       ai_summaries: {
         Row: { id: string; user_id: string; section: AiSection; content: string; model: string; generated_at: string };
         Insert: { id?: string; user_id?: string; section: AiSection; content: string; model: string; generated_at?: string };
         Update: Partial<Database['public']['Tables']['ai_summaries']['Insert']>;
+        Relationships: [];
+      };
+      body_metrics: {
+        Row: { id: string; user_id: string; recorded_at: string; weight_kg: number; bodyfat_pct: number | null; created_at: string };
+        Insert: { id?: string; user_id?: string; recorded_at?: string; weight_kg: number; bodyfat_pct?: number | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['body_metrics']['Insert']>;
         Relationships: [];
       };
     };
@@ -109,4 +121,6 @@ export type Exam = Tables<'exams'>;
 export type StudySession = Tables<'study_sessions'>;
 export type RoadmapCard = Tables<'roadmap_cards'>;
 export type Note = Tables<'notes'>;
+export type WorkMetric = Tables<'work_metrics'>;
 export type AiSummary = Tables<'ai_summaries'>;
+export type BodyMetric = Tables<'body_metrics'>;

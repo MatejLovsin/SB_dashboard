@@ -93,16 +93,17 @@ export function ExerciseHistory() {
           No logged sets for <strong>{selected.name}</strong> yet.
         </p>
       ) : (
-        <div className="space-y-5">
-          <Card>
-            <CardTitle className="mb-4">Estimated 1RM trend</CardTitle>
-            <StrengthTrendChart data={history} />
-          </Card>
-
-          <Card>
-            <CardTitle className="mb-4">Volume per session (kg)</CardTitle>
-            <VolumeBarChart data={history} />
-          </Card>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Card>
+              <CardTitle className="mb-4">Est. 1RM trend</CardTitle>
+              <StrengthTrendChart data={history} />
+            </Card>
+            <Card>
+              <CardTitle className="mb-4">Volume / session</CardTitle>
+              <VolumeBarChart data={history} />
+            </Card>
+          </div>
 
           <Card>
             <CardTitle className="mb-4">Consistency — last 12 weeks</CardTitle>

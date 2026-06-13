@@ -18,16 +18,16 @@ import { Spinner } from '@/components/ui/Spinner';
 import { CardForm } from './CardForm';
 
 const COLUMNS: { status: RoadmapStatus; label: string; color: string }[] = [
-  { status: 'idea', label: 'Idea', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' },
-  { status: 'planned', label: 'Planned', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-  { status: 'in_progress', label: 'In Progress', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-  { status: 'done', label: 'Done', color: 'bg-green-500/10 text-green-600 dark:text-green-400' },
+  { status: 'idea', label: 'Idea', color: 'bg-[var(--accent-soft)] text-[var(--muted)]' },
+  { status: 'planned', label: 'Planned', color: 'bg-[var(--accent-soft)] text-[var(--accent)]' },
+  { status: 'in_progress', label: 'In Progress', color: 'bg-[var(--chart-4)]/20 text-[var(--chart-4)]' },
+  { status: 'done', label: 'Done', color: 'bg-[var(--up)]/15 text-[var(--up)]' },
 ];
 
 const PRIORITY_CHIP: Record<Priority, string> = {
-  low: 'bg-border text-muted',
-  medium: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  high: 'bg-red-500/15 text-red-700 dark:text-red-400',
+  low: 'bg-[var(--border)] text-[var(--muted)]',
+  medium: 'bg-[var(--chart-3)]/20 text-[var(--chart-3)]',
+  high: 'bg-[var(--down)]/15 text-[var(--down)]',
 };
 
 function PriorityChip({ priority }: { priority: Priority | null }) {
@@ -108,7 +108,7 @@ function KanbanColumn({
   }
 
   return (
-    <div className="flex min-w-[220px] flex-1 flex-col rounded-2xl border border-border bg-background p-3">
+    <div className="flex min-w-[220px] flex-1 flex-col rounded-2xl border border-border bg-card p-3">
       {/* Column header */}
       <div className="mb-3 flex items-center justify-between">
         <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${color}`}>{label}</span>
@@ -142,10 +142,10 @@ function KanbanColumn({
                 onDragOver={(e) => handleDragOver(e, card.id)}
                 onDrop={(e) => handleDrop(e, card.id)}
                 onDragEnd={() => setDragOverId(null)}
-                className={`group cursor-grab rounded-xl border bg-card p-3 transition-all active:cursor-grabbing ${
+                className={`group cursor-grab rounded-xl border p-3 transition-all active:cursor-grabbing ${
                   dragOverId === card.id
-                    ? 'border-accent/60 shadow-sm ring-1 ring-accent/30'
-                    : 'border-border hover:border-border/80'
+                    ? 'border-accent/60 bg-[var(--card-2)] ring-1 ring-accent/30'
+                    : 'border-border bg-[var(--surface)] hover:border-accent/30'
                 }`}
               >
                 <div className="flex items-start gap-1.5">

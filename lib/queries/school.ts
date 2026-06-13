@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Subject, Exam, StudySession } from '@/lib/db/types';
+import { mondayOf } from '@/lib/utils/stats';
 
 type Client = SupabaseClient<Database>;
 
@@ -204,4 +205,98 @@ export async function listUpcomingExamsWithProgress(
   const exams = await listExams(client, { upcoming: true });
   const studyMap = await getStudySecondsForExams(client, exams.map((e) => e.id));
   return exams.map((exam) => ({ ...exam, studySeconds: studyMap.get(exam.id) ?? 0 }));
+}
+
+export async function listRecentStudySessions(
+  client: Client,
+  limit = 500,
+): Promise<StudySession[]> {
+  const { data, error } = await client
+    .from('study_sessions')
+    .select('*')
+    .order('started_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// --- Client-side aggregation helpers ---
+
+export function weeklyStudyHoursSeries(
+  sessions: StudySession[],
+  weeks = 12,
+): { label: string; value: number }[] {
+  const today = new Date();
+  const thisMonday = mondayOf(today);
+  const buckets = new Map<string, number>();
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(thisMonday + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    buckets.set(d.toISOString().slice(0, 10), 0);
+  }
+  for (const s of sessions) {
+    const w = mondayOf(new Date(s.started_at));
+    if (buckets.has(w)) buckets.set(w, (buckets.get(w) ?? 0) + s.duration_seconds);
+  }
+  return Array.from(buckets.entries()).map(([weekStart, secs]) => {
+    const d = new Date(weekStart + 'T00:00:00Z');
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    return { label, value: Math.round((secs / 3600) * 10) / 10 };
+  });
+}
+
+export function studyHoursPerSubject(
+  sessions: StudySession[],
+  subjects: Subject[],
+): { name: string; value: number }[] {
+  const buckets = new Map<string, number>();
+  for (const s of sessions) {
+    buckets.set(s.subject_id, (buckets.get(s.subject_id) ?? 0) + s.duration_seconds);
+  }
+  const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+  return Array.from(buckets.entries())
+    .map(([id, secs]) => ({
+      name: subjectMap.get(id) ?? 'Unknown',
+      value: Math.round((secs / 3600) * 10) / 10,
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+export function studyHoursThisWeek(sessions: StudySession[]): number {
+  const thisMonday = mondayOf(new Date()) + 'T00:00:00Z';
+  let secs = 0;
+  for (const s of sessions) {
+    if (s.started_at >= thisMonday) secs += s.duration_seconds;
+  }
+  return Math.round((secs / 3600) * 10) / 10;
+}
+
+export function studyHoursPrevWeek(sessions: StudySession[]): number {
+  const thisMondayMs = new Date(mondayOf(new Date()) + 'T00:00:00Z').getTime();
+  const prevMondayMs = thisMondayMs - 7 * 86_400_000;
+  let secs = 0;
+  for (const s of sessions) {
+    const t = new Date(s.started_at).getTime();
+    if (t >= prevMondayMs && t < thisMondayMs) secs += s.duration_seconds;
+  }
+  return Math.round((secs / 3600) * 10) / 10;
+}
+
+export function studyStreakDays(sessions: StudySession[]): number {
+  if (sessions.length === 0) return 0;
+  const dates = new Set(sessions.map((s) => s.started_at.slice(0, 10)));
+  let cursor = new Date().toISOString().slice(0, 10);
+  if (!dates.has(cursor)) {
+    const d = new Date(cursor);
+    d.setDate(d.getDate() - 1);
+    cursor = d.toISOString().slice(0, 10);
+  }
+  let streak = 0;
+  while (dates.has(cursor)) {
+    streak++;
+    const d = new Date(cursor);
+    d.setDate(d.getDate() - 1);
+    cursor = d.toISOString().slice(0, 10);
+  }
+  return streak;
 }

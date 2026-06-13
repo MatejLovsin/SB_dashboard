@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, RoadmapCard, Note, RoadmapStatus, Priority } from '@/lib/db/types';
+import type { Database, RoadmapCard, Note, WorkMetric, RoadmapStatus, Priority } from '@/lib/db/types';
+import type { BarPoint } from '@/components/charts/BarCluster';
+import type { DonutSlice } from '@/components/charts/DonutStat';
+import type { AreaTrendPoint } from '@/components/charts/AreaTrend';
+import { mondayOf } from '@/lib/utils/stats';
 
 type Client = SupabaseClient<Database>;
 
@@ -7,6 +11,7 @@ export const workKeys = {
   all: ['work'] as const,
   cards: () => [...workKeys.all, 'cards'] as const,
   notes: (search?: string) => [...workKeys.all, 'notes', search ?? ''] as const,
+  metrics: () => [...workKeys.all, 'metrics'] as const,
 };
 
 export type CardInput = {
@@ -151,4 +156,87 @@ export async function updateNote(
 export async function deleteNote(client: Client, id: string): Promise<void> {
   const { error } = await client.from('notes').delete().eq('id', id);
   if (error) throw error;
+}
+
+// --- Aggregations (pure, no DB call) ---
+
+export function cardsByStatus(cards: RoadmapCard[]): DonutSlice[] {
+  const counts: Record<RoadmapStatus, number> = { idea: 0, planned: 0, in_progress: 0, done: 0 };
+  for (const c of cards) counts[c.status]++;
+  const labels: Record<RoadmapStatus, string> = {
+    idea: 'Idea',
+    planned: 'Planned',
+    in_progress: 'In Progress',
+    done: 'Done',
+  };
+  return (Object.keys(counts) as RoadmapStatus[])
+    .filter((s) => counts[s] > 0)
+    .map((s) => ({ name: labels[s], value: counts[s] }));
+}
+
+export function cardsByPriority(cards: RoadmapCard[]): BarPoint[] {
+  const counts: Record<Priority, number> = { low: 0, medium: 0, high: 0 };
+  for (const c of cards) if (c.priority) counts[c.priority]++;
+  const labels: Record<Priority, string> = { low: 'Low', medium: 'Medium', high: 'High' };
+  return (Object.keys(counts) as Priority[]).map((p) => ({ label: labels[p], value: counts[p] }));
+}
+
+export function notesPerWeek(notes: Note[], weeks = 8): AreaTrendPoint[] {
+  const points: AreaTrendPoint[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const anchor = new Date(Date.now() - i * 7 * 86400_000);
+    const mondayStr = mondayOf(anchor);
+    const mondayDate = new Date(mondayStr + 'T00:00:00Z');
+    const sundayStr = new Date(mondayDate.getTime() + 6 * 86400_000).toISOString().slice(0, 10);
+    const label = mondayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    const value = notes.filter((n) => n.entry_date >= mondayStr && n.entry_date <= sundayStr).length;
+    points.push({ label, value });
+  }
+  return points;
+}
+
+// --- Work metrics ---
+
+export async function listWorkMetrics(client: Client, weeks = 8): Promise<WorkMetric[]> {
+  const since = new Date(Date.now() - weeks * 7 * 86400_000).toISOString().slice(0, 10);
+  const { data, error } = await client
+    .from('work_metrics')
+    .select('*')
+    .gte('date', since)
+    .order('date');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function upsertWorkMetric(
+  client: Client,
+  date: string,
+  value: number,
+  label = 'focus score',
+): Promise<WorkMetric> {
+  const { data, error } = await client
+    .from('work_metrics')
+    .upsert({ date, value, label }, { onConflict: 'user_id,date,label' })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export function focusScoreSeries(metrics: WorkMetric[], weeks = 8): AreaTrendPoint[] {
+  const points: AreaTrendPoint[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const anchor = new Date(Date.now() - i * 7 * 86400_000);
+    const mondayStr = mondayOf(anchor);
+    const mondayDate = new Date(mondayStr + 'T00:00:00Z');
+    const sundayStr = new Date(mondayDate.getTime() + 6 * 86400_000).toISOString().slice(0, 10);
+    const label = mondayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    const weekMetrics = metrics.filter((m) => m.date >= mondayStr && m.date <= sundayStr);
+    const avg =
+      weekMetrics.length > 0
+        ? Math.round((weekMetrics.reduce((s, m) => s + Number(m.value), 0) / weekMetrics.length) * 10) / 10
+        : 0;
+    points.push({ label, value: avg });
+  }
+  return points;
 }

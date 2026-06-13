@@ -1,39 +1,28 @@
 # PROGRESS — read this first, every session
 
-Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it when you need historical context.
+Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it when explicitly asked about something from a previous session.
 
 ---
 
 ## ▶ NEXT STEP
 
-**Session 9 is complete.** All sessions 1–9 are done.
+**Build (S1–S9) complete. Running multi-session VISUAL REDESIGN** — dark-only navy+blue analytics aesthetic.
+Read `REDESIGN.md` next (design contract + remaining session specs). Benchmark: `design idea.jpg`.
 
-**Remaining optional actions:**
-- Deploy to Vercel (set env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`)
+- R1 Foundation — DONE
+- R2 Fitness showcase — DONE
+- R3 Home dashboard — DONE
+- R4 School — DONE (StatTile KPI strip, AreaTrend weekly hours, DonutStat per subject, BarCluster per exam, subject detail AreaTrend)
+- R5 Work — DONE (StatTile KPI strip, DonutStat cards-by-status, BarCluster cards-by-priority, AreaTrend notes-per-week + focus score, WorkMetricLogger, restyle KanbanBoard + NoteList, migration 0005_work_metrics.sql)
+- R6 Polish & consistency — DONE (fade-up stagger animation on KPI grids, `.panel-hover` micro-interactions on link cards, empty states in AreaTrend + BarCluster, spacing normalized to `space-y-6` across all pages)
+
+**All R1–R6 complete. Redesign done.**
+
+**Pending manual actions:**
+- Apply migration `0004_body_metrics.sql` in Supabase SQL editor
+- Apply migration `0005_work_metrics.sql` in Supabase SQL editor
 - Disable public sign-ups in Supabase Auth (dashboard → Auth → Settings)
-- Test "Add to Home Screen" on iOS and Android
-
----
-
-## Session 9 — completed
-
-- **PWA manifest** (`app/manifest.ts`): display:standalone, theme/background #0a0a0a, icons
-- **App icons**: `app/icon.tsx` (32×32 favicon) + `app/apple-icon.tsx` (180×180 apple touch icon) via ImageResponse
-- **Loading states**: `loading.tsx` in `(app)/`, `fitness/`, `fitness/history/`, `fitness/overview/`, `school/`, `work/`
-- **Error boundary**: `app/(app)/error.tsx` — client error boundary with retry (uses `unstable_retry` per Next 16 API)
-- **Recharts lazy-load**: `dynamic()` in `ExerciseHistory.tsx` (StrengthTrendChart, VolumeBarChart with `ssr:false`), `FitnessOverview.tsx` (SessionsPerWeekChart), school subjects page (StudySessionsChart)
-- Build passes: `npx tsc --noEmit` + `npm run build` both clean
-
----
-
-## Pending manual actions
-- [ ] Disable public sign-ups in Supabase Auth (dashboard → Auth → Settings)
-- [ ] Deploy to Vercel (optional)
-
-## Everything else is done
-- All DB migrations run: `0001_init.sql`, `0002_plan_sets.sql`, `0003_session_sets_position.sql`
-- `.env.local` fully populated: Supabase URL + anon key + Anthropic API key
-- Login verified; app functional through Session 9
+- Deploy to Vercel (env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`)
 
 ---
 
@@ -41,5 +30,4 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 ```
 npx tsc --noEmit
 npm run build
-npm run lint
 ```

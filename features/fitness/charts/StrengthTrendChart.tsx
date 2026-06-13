@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   LineChart,
   Line,
@@ -12,15 +11,11 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { bestSetE1RM } from '@/lib/utils/stats';
+import { tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
 import type { ExerciseSessionPoint } from '@/lib/queries/analytics';
 
 interface Props {
   data: ExerciseSessionPoint[];
-}
-
-function readVar(name: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 }
 
 function shortDate(iso: string): string {
@@ -29,8 +24,7 @@ function shortDate(iso: string): string {
 }
 
 export function StrengthTrendChart({ data }: Props) {
-  const [accent] = useState(() => readVar('--accent', '#4f46e5'));
-  const [muted] = useState(() => readVar('--muted', '#737373'));
+  const theme = useChartTheme();
 
   const chartData = data.map((p) => ({
     date: shortDate(p.session.performed_at),
@@ -41,44 +35,35 @@ export function StrengthTrendChart({ data }: Props) {
   return (
     <ResponsiveContainer width="100%" height={180}>
       <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
-        <CartesianGrid vertical={false} stroke={muted} strokeOpacity={0.2} />
+        <CartesianGrid vertical={false} stroke={theme.border} strokeOpacity={0.6} />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 11, fill: muted }}
+          tick={{ fontSize: 11, fill: theme.muted }}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
-          tick={{ fontSize: 11, fill: muted }}
+          tick={{ fontSize: 11, fill: theme.muted }}
           tickLine={false}
           axisLine={false}
           domain={['auto', 'auto']}
         />
         <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            fontSize: 12,
-            border: 'none',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          }}
+          contentStyle={tooltipStyle(theme)}
+          labelStyle={{ color: theme.muted }}
           formatter={(v) => [v ? `${v} kg` : '—', 'Est. 1RM']}
         />
         {peak !== undefined && (
-          <ReferenceLine
-            y={peak}
-            stroke={accent}
-            strokeOpacity={0.3}
-            strokeDasharray="4 4"
-          />
+          <ReferenceLine y={peak} stroke={theme.accent} strokeOpacity={0.3} strokeDasharray="4 4" />
         )}
         <Line
           type="monotone"
           dataKey="e1rm"
-          stroke={accent}
-          strokeWidth={2}
-          dot={{ r: 3, fill: accent, strokeWidth: 0 }}
-          activeDot={{ r: 5 }}
+          stroke={theme.accent}
+          strokeWidth={2.5}
+          dot={{ r: 3, fill: theme.accent, strokeWidth: 0 }}
+          activeDot={{ r: 5, stroke: theme.surface, strokeWidth: 2 }}
           connectNulls
         />
       </LineChart>

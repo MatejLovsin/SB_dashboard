@@ -75,7 +75,7 @@ export function PlanList() {
 
       {isPending ? (
         <div className="flex items-center gap-2 text-sm text-muted">
-          <Spinner /> Loading plans…
+          <Spinner /> Loading plans...
         </div>
       ) : isError ? (
         <p className="text-sm text-red-600 dark:text-red-400">{(error as Error).message}</p>
@@ -86,15 +86,29 @@ export function PlanList() {
           description="Create a plan to save a reusable set of exercises and targets."
         />
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="space-y-2">
           {plans.map((plan) => (
             <li key={plan.id}>
               <Card className="flex items-center gap-3 p-4">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: 'var(--accent-soft)' }}
+                >
+                  <Dumbbell className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                </span>
                 <Link href={`/fitness/plans/${plan.id}`} className="min-w-0 flex-1">
                   <p className="truncate font-medium">{plan.name}</p>
-                  <p className="mt-0.5 text-sm text-muted">
-                    {plan.category ? `${plan.category} · ` : ''}
-                    {plan.exerciseCount} {plan.exerciseCount === 1 ? 'exercise' : 'exercises'}
+                  <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                    {plan.category && (
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+                        style={{ background: 'var(--card-2)', color: 'var(--accent)' }}
+                      >
+                        {plan.category}
+                      </span>
+                    )}
+                    {plan.exerciseCount}{' '}
+                    {plan.exerciseCount === 1 ? 'exercise' : 'exercises'}
                   </p>
                 </Link>
                 <Button
@@ -103,7 +117,7 @@ export function PlanList() {
                   aria-label={`Delete ${plan.name}`}
                   disabled={deleteMutation.isPending}
                   onClick={() => {
-                    if (confirm(`Delete plan “${plan.name}”?`)) deleteMutation.mutate(plan.id);
+                    if (confirm(`Delete plan "${plan.name}"?`)) deleteMutation.mutate(plan.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -111,7 +125,7 @@ export function PlanList() {
                 <Link
                   href={`/fitness/plans/${plan.id}`}
                   aria-label={`Open ${plan.name}`}
-                  className="text-muted"
+                  style={{ color: 'var(--accent)' }}
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Link>

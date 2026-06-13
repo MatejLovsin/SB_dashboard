@@ -81,10 +81,16 @@ export function SessionRunner() {
           description="Create a plan first, or start an empty workout above."
         />
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="space-y-2">
           {plans.map((plan) => (
             <li key={plan.id}>
               <Card className="flex items-center gap-3 p-4">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: 'var(--accent-soft)' }}
+                >
+                  <Dumbbell className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                </span>
                 <button
                   type="button"
                   className="min-w-0 flex-1 text-left disabled:opacity-60"
@@ -92,7 +98,7 @@ export function SessionRunner() {
                   onClick={() => fromPlanMutation.mutate(plan.id)}
                 >
                   <p className="truncate font-medium">{plan.name}</p>
-                  <p className="mt-0.5 text-sm text-muted">
+                  <p className="mt-0.5 text-xs text-muted">
                     {plan.category ? `${plan.category} · ` : ''}
                     {plan.exerciseCount} {plan.exerciseCount === 1 ? 'exercise' : 'exercises'}
                   </p>
@@ -100,7 +106,10 @@ export function SessionRunner() {
                 {fromPlanMutation.isPending && fromPlanMutation.variables === plan.id ? (
                   <Spinner />
                 ) : (
-                  <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
+                  <ChevronRight
+                    className="h-5 w-5 shrink-0"
+                    style={{ color: 'var(--accent)' }}
+                  />
                 )}
               </Card>
             </li>

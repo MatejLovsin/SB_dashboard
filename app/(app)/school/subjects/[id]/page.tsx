@@ -3,10 +3,13 @@ import { Clock, BookOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardTitle } from '@/components/ui/Card';
+import { ChartCard } from '@/components/charts/ChartCard';
+import { StatTile } from '@/components/ui/StatTile';
 import dynamic from 'next/dynamic';
+import { weeklyStudyHoursSeries } from '@/lib/queries/school';
 
-const StudySessionsChart = dynamic(() =>
-  import('@/features/school/charts/StudySessionsChart').then((m) => m.StudySessionsChart),
+const SubjectHoursChart = dynamic(() =>
+  import('@/features/school/charts/SubjectHoursChart').then((m) => m.SubjectHoursChart),
 );
 
 function formatDuration(seconds: number): string {
@@ -24,7 +27,6 @@ function formatDate(iso: string): string {
   });
 }
 
-// `params` is a Promise in Next 16 — await it before reading the segment.
 export default async function SubjectDetailPage({
   params,
 }: {
@@ -50,39 +52,20 @@ export default async function SubjectDetailPage({
   const sessions = rows ?? [];
   const totalSeconds = sessions.reduce((sum, s) => sum + s.duration_seconds, 0);
   const totalHours = (totalSeconds / 3600).toFixed(1);
+  const weeklySeries = weeklyStudyHoursSeries(sessions);
 
   return (
-    <div>
-      <PageHeader
-        title={subject.name}
-        description="Study sessions and hours logged."
-      />
+    <div className="space-y-6">
+      <PageHeader title={subject.name} description="Study sessions and hours logged." />
 
-      <div className="mb-5 grid grid-cols-2 gap-3">
-        <Card className="p-4">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
-            <Clock className="h-3.5 w-3.5" /> Total hours
-          </div>
-          <p className="text-3xl font-bold tabular-nums">
-            {totalHours}
-            <span className="ml-1 text-base font-normal text-muted">h</span>
-          </p>
-        </Card>
-
-        <Card className="p-4">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
-            <BookOpen className="h-3.5 w-3.5" /> Sessions
-          </div>
-          <p className="text-3xl font-bold tabular-nums">{sessions.length}</p>
-        </Card>
+      <div className="stagger-fade grid grid-cols-2 gap-3">
+        <StatTile label="Total hours" value={totalHours} unit="h" />
+        <StatTile label="Sessions" value={sessions.length} />
       </div>
 
-      {sessions.length > 0 && (
-        <Card className="mb-5">
-          <CardTitle className="mb-4">Minutes per session</CardTitle>
-          <StudySessionsChart sessions={sessions} />
-        </Card>
-      )}
+      <ChartCard title="Weekly hours">
+        <SubjectHoursChart data={weeklySeries} />
+      </ChartCard>
 
       <Card>
         <CardTitle className="mb-4">Session history</CardTitle>

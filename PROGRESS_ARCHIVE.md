@@ -33,6 +33,10 @@ Only open this file when you need historical context. PROGRESS.md holds the acti
 - [x] **S8 — AI summary layer.** `lib/ai/` (Anthropic client + prompts); `app/api/summary/route.ts`
       (JWT check, gather data, `claude-sonnet-4-6`, prompt caching, upsert `ai_summaries`);
       `SummaryCard` with Regenerate on home + sections. tsc + build clean.
+- [x] **S9 — PWA + polish.** Manifest, app icons, loading skeletons per route, error boundary, Recharts lazy-load via `dynamic(ssr:false)` in client components.
+- [x] **R1 — Redesign foundation.** Dark-only navy+blue tokens in `globals.css`; `.nums`/`.panel` utilities; shared chart kit (`chartTheme.ts`, `StatTile`, `ChartCard`, `Sparkline`, `AreaTrend`, `DonutStat`, `BarCluster`); rethemed shell + Card; existing charts refactored onto chartTheme.
+- [x] **R2 — Fitness showcase.** `FitnessOverview` rebuilt with KPI row, hero AreaTrend, BarCluster, DonutStat, BodyweightLogger. `body_metrics` migration + types. `ExerciseHistory` side-by-side charts. `PlanList`/`SessionRunner` rethemed.
+- [x] **R3 — Home dashboard.** `lib/queries/home.ts` `getHomeMetrics()` (fitness 30d volume, school hours this week, work in-progress count + sparklines). `app/(app)/page.tsx` rebuilt with 3-tile KPI strip + existing SummaryCards.
 
 ---
 
@@ -56,3 +60,4 @@ Only open this file when you need historical context. PROGRESS.md holds the acti
 - **Plan editor writes to cache, doesn't refetch.** `patchPlan` merges into cached
   `PlanWithExercises` instead of invalidating — avoids 4 round trips per edit.
 - **Schema changes** go in new files under `supabase/migrations/` (don't edit `0001_init.sql`).
+- **Next 16 / Turbopack forbids `dynamic(..., { ssr: false })` in Server Components.** Import client components directly; `ssr: false` is only valid inside `'use client'` files.

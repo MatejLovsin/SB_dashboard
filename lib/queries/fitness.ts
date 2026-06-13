@@ -11,6 +11,7 @@ import type {
   PlanSet,
   WorkoutSession,
   SessionSet,
+  BodyMetric,
 } from '@/lib/db/types';
 
 export type Client = SupabaseClient<Database>;
@@ -59,6 +60,7 @@ export const fitnessKeys = {
   sessionsRange: (from: string) => [...fitnessKeys.all, 'sessions-range', from] as const,
   exerciseHistory: (exerciseId: string) =>
     [...fitnessKeys.all, 'exercise-history', exerciseId] as const,
+  bodyMetrics: () => [...fitnessKeys.all, 'body-metrics'] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,34 @@ export async function searchExercises(client: Client, search: string): Promise<E
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Body metrics
+// ---------------------------------------------------------------------------
+
+export async function getBodyMetrics(
+  client: Client,
+  limit = 60,
+): Promise<BodyMetric[]> {
+  const { data, error } = await client
+    .from('body_metrics')
+    .select('*')
+    .order('recorded_at', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function logBodyMetric(
+  client: Client,
+  weight_kg: number,
+  bodyfat_pct?: number | null,
+): Promise<void> {
+  const { error } = await client
+    .from('body_metrics')
+    .insert({ weight_kg, bodyfat_pct: bodyfat_pct ?? null });
+  if (error) throw error;
 }
 
 export async function createExercise(

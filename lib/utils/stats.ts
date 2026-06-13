@@ -35,7 +35,7 @@ export function totalVolume(sets: SetLike[]): number {
 }
 
 // Monday of the week containing `d`, as YYYY-MM-DD (UTC).
-function mondayOf(d: Date): string {
+export function mondayOf(d: Date): string {
   const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   const dow = date.getUTCDay(); // 0 = Sunday
   const diff = dow === 0 ? -6 : 1 - dow;
@@ -83,6 +83,77 @@ export function currentStreakWeeks(sessions: Array<{ performed_at: string }>): n
     cursor = d.toISOString().slice(0, 10);
   }
   return streak;
+}
+
+// Returns (current - previous) / previous * 100, or null when previous is 0.
+export function deltaPercent(current: number, previous: number): number | null {
+  if (previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+// Sum volume (reps × weight) for the given session IDs.
+export function volumeForSessionIds(
+  sessionIds: Set<string>,
+  sets: Array<{ session_id: string } & SetLike>,
+): number {
+  let vol = 0;
+  for (const set of sets) {
+    if (!set.completed || set.reps == null || set.weight == null) continue;
+    if (sessionIds.has(set.session_id)) vol += set.reps * set.weight;
+  }
+  return Math.round(vol);
+}
+
+// Weekly volume series for an AreaTrend chart.
+export function weeklyVolumeSeries(
+  sessions: Array<{ id: string; performed_at: string }>,
+  sets: Array<{ session_id: string } & SetLike>,
+  weeks = 12,
+): { label: string; value: number }[] {
+  const today = new Date();
+  const thisMonday = mondayOf(today);
+  const buckets = new Map<string, number>();
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(thisMonday);
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    buckets.set(d.toISOString().slice(0, 10), 0);
+  }
+
+  const sessionWeek = new Map<string, string>();
+  for (const s of sessions) {
+    sessionWeek.set(s.id, mondayOf(new Date(s.performed_at)));
+  }
+
+  for (const set of sets) {
+    if (!set.completed || set.reps == null || set.weight == null) continue;
+    const week = sessionWeek.get(set.session_id);
+    if (week && buckets.has(week)) {
+      buckets.set(week, (buckets.get(week) ?? 0) + set.reps * set.weight);
+    }
+  }
+
+  return Array.from(buckets.entries()).map(([weekStart, vol]) => {
+    const d = new Date(weekStart + 'T00:00:00Z');
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    return { label, value: Math.round(vol) };
+  });
+}
+
+// Volume bucketed by exercise category — input for DonutStat.
+export function categorySplit(
+  sets: Array<{ exercise_id: string } & SetLike>,
+  exerciseCategories: Map<string, string | null>,
+): { name: string; value: number }[] {
+  const buckets = new Map<string, number>();
+  for (const set of sets) {
+    if (!set.completed || set.reps == null || set.weight == null) continue;
+    const rawCat = exerciseCategories.get(set.exercise_id);
+    const cat = rawCat ? rawCat.charAt(0).toUpperCase() + rawCat.slice(1).toLowerCase() : 'Other';
+    buckets.set(cat, (buckets.get(cat) ?? 0) + set.reps * set.weight);
+  }
+  return [...buckets.entries()]
+    .map(([name, value]) => ({ name, value: Math.round(value) }))
+    .sort((a, b) => b.value - a.value);
 }
 
 // history must be ordered oldest → newest.

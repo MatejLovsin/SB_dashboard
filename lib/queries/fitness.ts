@@ -1,0 +1,104 @@
+// Shared foundation: types, query-key factory, exercise dictionary, and the
+// fetchExercisesById helper used by both plans.ts and sessions.ts.
+// Heavy query logic lives in: plans.ts · sessions.ts · analytics.ts
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type {
+  Database,
+  Exercise,
+  WorkoutPlan,
+  PlanExercise,
+  PlanSet,
+  WorkoutSession,
+  SessionSet,
+} from '@/lib/db/types';
+
+export type Client = SupabaseClient<Database>;
+
+// ---------------------------------------------------------------------------
+// Shared type aliases
+// ---------------------------------------------------------------------------
+
+export type ExerciseLite = Pick<Exercise, 'id' | 'name' | 'category'>;
+
+export type PlanExerciseLine = PlanExercise & {
+  exercise: ExerciseLite | null;
+  sets: PlanSet[];
+};
+
+export type PlanWithExercises = {
+  plan: WorkoutPlan;
+  lines: PlanExerciseLine[];
+};
+
+export type PlanListItem = WorkoutPlan & { exerciseCount: number };
+
+export type SessionSetGroup = {
+  exercise_id: string;
+  exercise: ExerciseLite | null;
+  sets: SessionSet[];
+};
+
+export type SessionWithSets = {
+  session: WorkoutSession;
+  groups: SessionSetGroup[];
+};
+
+// ---------------------------------------------------------------------------
+// Query key factory
+// ---------------------------------------------------------------------------
+
+export const fitnessKeys = {
+  all: ['fitness'] as const,
+  exercisesAll: () => [...fitnessKeys.all, 'exercises'] as const,
+  exercises: (search: string) => [...fitnessKeys.exercisesAll(), search] as const,
+  plans: () => [...fitnessKeys.all, 'plans'] as const,
+  plan: (id: string) => [...fitnessKeys.all, 'plan', id] as const,
+  sessions: () => [...fitnessKeys.all, 'sessions'] as const,
+  session: (id: string) => [...fitnessKeys.all, 'session', id] as const,
+  sessionsRange: (from: string) => [...fitnessKeys.all, 'sessions-range', from] as const,
+  exerciseHistory: (exerciseId: string) =>
+    [...fitnessKeys.all, 'exercise-history', exerciseId] as const,
+};
+
+// ---------------------------------------------------------------------------
+// Shared helper
+// ---------------------------------------------------------------------------
+
+export async function fetchExercisesById(
+  client: Client,
+  ids: string[],
+): Promise<Map<string, Exercise>> {
+  const map = new Map<string, Exercise>();
+  if (ids.length === 0) return map;
+  const { data, error } = await client.from('exercises').select('*').in('id', ids);
+  if (error) throw error;
+  for (const exercise of data ?? []) map.set(exercise.id, exercise);
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Exercises (autocomplete dictionary)
+// ---------------------------------------------------------------------------
+
+export async function searchExercises(client: Client, search: string): Promise<Exercise[]> {
+  const term = search.trim();
+  let query = client.from('exercises').select('*').order('name').limit(20);
+  if (term) query = query.ilike('name', `%${term}%`);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createExercise(
+  client: Client,
+  input: { name: string; category?: string | null },
+): Promise<Exercise> {
+  const { data, error } = await client
+    .from('exercises')
+    .insert({ name: input.name.trim(), category: input.category ?? null })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}

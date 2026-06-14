@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { fitnessKeys } from '@/lib/queries/fitness';
@@ -22,7 +23,7 @@ const VolumeBarChart = dynamic(
   () => import('./charts/VolumeBarChart').then((m) => m.VolumeBarChart),
   { ssr: false, loading: () => <div className="flex h-44 items-center justify-center"><Spinner /></div> },
 );
-import { BarChart2, X } from 'lucide-react';
+import { BarChart2, Settings2, X } from 'lucide-react';
 
 export function ExerciseHistory() {
   const supabase = createClient();
@@ -45,10 +46,19 @@ export function ExerciseHistory() {
 
   return (
     <div>
-      <PageHeader
-        title="Exercise history"
-        description="Strength trend, volume, and consistency for any exercise."
-      />
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <PageHeader
+          title="Exercise history"
+          description="Strength trend, volume, and consistency for any exercise."
+        />
+        <Link
+          href="/fitness/exercises"
+          className="mt-1 flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
+        >
+          <Settings2 className="h-4 w-4" />
+          Manage
+        </Link>
+      </div>
 
       {/* Exercise selector */}
       {picking ? (

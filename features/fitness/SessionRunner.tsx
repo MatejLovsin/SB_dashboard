@@ -11,9 +11,15 @@ import { startSession, startSessionFromPlan } from '@/lib/queries/sessions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ActiveSession } from './ActiveSession';
+
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 // Drives the workout-logging flow: pick a plan (or start empty) → log sets live.
 export function SessionRunner() {
@@ -21,6 +27,7 @@ export function SessionRunner() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [date, setDate] = useState(todayISO());
 
   // Seed the session into the cache so ActiveSession renders without refetching.
   const onStarted = (data: SessionWithSets) => {
@@ -28,13 +35,15 @@ export function SessionRunner() {
     setSessionId(data.session.id);
   };
 
+  const performedAt = date + 'T12:00:00.000Z';
+
   const fromPlanMutation = useMutation({
-    mutationFn: (planId: string) => startSessionFromPlan(supabase, planId),
+    mutationFn: (planId: string) => startSessionFromPlan(supabase, planId, { performed_at: performedAt }),
     onSuccess: onStarted,
   });
 
   const emptyMutation = useMutation({
-    mutationFn: () => startSession(supabase, {}),
+    mutationFn: () => startSession(supabase, { performed_at: performedAt }),
     onSuccess: onStarted,
   });
 
@@ -55,6 +64,16 @@ export function SessionRunner() {
   return (
     <div>
       <PageHeader title="Log workout" description="Start from a plan or log an empty session." />
+
+      <div className="mb-5">
+        <Input
+          label="Date"
+          type="date"
+          value={date}
+          max={todayISO()}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </div>
 
       <Button
         variant="secondary"

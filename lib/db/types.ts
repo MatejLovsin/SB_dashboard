@@ -12,8 +12,8 @@ export interface Database {
   public: {
     Tables: {
       exercises: {
-        Row: { id: string; user_id: string; name: string; category: string | null; notes: string | null } & Timestamps;
-        Insert: { id?: string; user_id?: string; name: string; category?: string | null; notes?: string | null; created_at?: string };
+        Row: { id: string; user_id: string; name: string; category: string | null; notes: string | null; pinned: boolean } & Timestamps;
+        Insert: { id?: string; user_id?: string; name: string; category?: string | null; notes?: string | null; pinned?: boolean; created_at?: string };
         Update: Partial<Database['public']['Tables']['exercises']['Insert']>;
         Relationships: [];
       };

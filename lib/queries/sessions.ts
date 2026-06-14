@@ -46,11 +46,15 @@ function groupSessionSets(
 
 export async function startSession(
   client: Client,
-  input: { plan_id?: string | null; title?: string | null } = {},
+  input: { plan_id?: string | null; title?: string | null; performed_at?: string } = {},
 ): Promise<SessionWithSets> {
   const { data, error } = await client
     .from('workout_sessions')
-    .insert({ plan_id: input.plan_id ?? null, title: input.title ?? null })
+    .insert({
+      plan_id: input.plan_id ?? null,
+      title: input.title ?? null,
+      ...(input.performed_at ? { performed_at: input.performed_at } : {}),
+    })
     .select('*')
     .single();
   if (error) throw error;
@@ -60,12 +64,17 @@ export async function startSession(
 export async function startSessionFromPlan(
   client: Client,
   planId: string,
+  opts: { performed_at?: string } = {},
 ): Promise<SessionWithSets> {
   const { plan, lines } = await getPlanWithExercises(client, planId);
 
   const { data: session, error: sessionError } = await client
     .from('workout_sessions')
-    .insert({ plan_id: planId, title: plan.name })
+    .insert({
+      plan_id: planId,
+      title: plan.name,
+      ...(opts.performed_at ? { performed_at: opts.performed_at } : {}),
+    })
     .select('*')
     .single();
   if (sessionError) throw sessionError;
@@ -171,7 +180,7 @@ export async function deleteSessionSet(client: Client, setId: string): Promise<v
 export async function updateSession(
   client: Client,
   sessionId: string,
-  patch: { notes?: string | null; title?: string | null },
+  patch: { notes?: string | null; title?: string | null; performed_at?: string },
 ): Promise<WorkoutSession> {
   const { data, error } = await client
     .from('workout_sessions')

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, WorkoutSession, SessionSet } from '@/lib/db/types';
+import { bestSetE1RM } from '@/lib/utils/stats';
 
 type Client = SupabaseClient<Database>;
 
@@ -34,6 +35,43 @@ export async function getSessionSetsBySessionIds(
     .in('session_id', sessionIds);
   if (error) throw error;
   return data ?? [];
+}
+
+export type PinnedLiftPoint = { date: string; e1rm: number };
+export type PinnedLiftTrend = {
+  exercise: { id: string; name: string };
+  points: PinnedLiftPoint[];
+  current: number | null;
+  delta: number | null;
+};
+
+// Pinned lifts + their est-1RM trend, for the Fitness hub mini charts. The
+// e1rm series is computed here so the client payload stays a few numbers.
+export async function getPinnedLiftTrends(
+  client: Client,
+  limit = 8,
+): Promise<PinnedLiftTrend[]> {
+  const { data: pinned, error } = await client
+    .from('exercises')
+    .select('id, name')
+    .eq('pinned', true)
+    .order('name');
+  if (error) throw error;
+  if (!pinned || pinned.length === 0) return [];
+
+  return Promise.all(
+    pinned.map(async (exercise) => {
+      const history = await getExerciseHistory(client, exercise.id, limit);
+      const points: PinnedLiftPoint[] = history.map((p) => ({
+        date: p.session.performed_at,
+        e1rm: Math.round(bestSetE1RM(p.sets)),
+      }));
+      const current = points.length > 0 ? points[points.length - 1].e1rm : null;
+      const delta =
+        points.length > 1 ? current! - points[0].e1rm : null;
+      return { exercise, points, current, delta };
+    }),
+  );
 }
 
 export async function getExerciseHistory(

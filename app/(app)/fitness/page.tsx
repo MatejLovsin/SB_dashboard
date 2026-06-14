@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BarChart2, ChevronRight, ClipboardList, Play, TrendingUp } from 'lucide-react';
+import { BarChart2, ChevronRight, ClipboardList, History, Play, TrendingUp } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { createClient } from '@/lib/supabase/server';
@@ -7,6 +7,8 @@ import { getSummary } from '@/lib/queries/ai';
 import { SummaryCard } from '@/components/ai/SummaryCard';
 import { FitnessOverviewPreview } from '@/features/fitness/FitnessOverviewPreview';
 import { PlanListPreview } from '@/features/fitness/PlanListPreview';
+import { PinnedLifts } from '@/features/fitness/PinnedLifts';
+import { getPinnedLiftTrends } from '@/lib/queries/analytics';
 
 async function getRecentExerciseNames(count = 5): Promise<string[]> {
   const supabase = await createClient();
@@ -40,9 +42,10 @@ async function getRecentExerciseNames(count = 5): Promise<string[]> {
 
 export default async function FitnessPage() {
   const supabase = await createClient();
-  const [summary, recentExercises] = await Promise.all([
+  const [summary, recentExercises, pinnedLifts] = await Promise.all([
     getSummary(supabase, 'fitness').catch(() => null),
     getRecentExerciseNames(),
+    getPinnedLiftTrends(supabase).catch(() => []),
   ]);
 
   return (
@@ -51,39 +54,64 @@ export default async function FitnessPage() {
 
       <SummaryCard section="fitness" initial={summary} />
 
-      {/* Start workout CTA */}
-      <Link href="/fitness/log" className="block">
-        <Card className="flex items-center gap-3 bg-accent p-4 text-white">
-          <span className="rounded-xl bg-white/20 p-2.5">
-            <Play className="h-5 w-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold">Start workout</span>
-            <span className="mt-0.5 block text-sm text-white/80">
-              Pick a plan and log your sets.
+      {/* Primary actions — side-by-side, whole tile clickable */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Start workout */}
+        <Link href="/fitness/log" className="block">
+          <Card className="panel-hover flex h-full flex-col gap-4 bg-accent p-4 text-white">
+            <span className="w-fit rounded-xl bg-white/20 p-2.5">
+              <Play className="h-5 w-5" />
             </span>
-          </span>
-          <ChevronRight className="h-5 w-5 text-white/80" />
+            <span className="block">
+              <span className="flex items-center gap-1 font-semibold">
+                Start workout
+                <ChevronRight className="h-4 w-4 text-white/80" />
+              </span>
+              <span className="mt-0.5 block text-sm text-white/80">
+                Pick a plan and log your sets.
+              </span>
+            </span>
+          </Card>
+        </Link>
+
+        {/* Session log */}
+        <Link href="/fitness/sessions" className="block">
+          <Card className="panel-hover flex h-full flex-col gap-4 p-4">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: 'var(--accent-soft)' }}
+            >
+              <History className="h-5 w-5" style={{ color: 'var(--accent)' }} />
+            </span>
+            <span className="block">
+              <span className="flex items-center gap-1 font-semibold">
+                Session log
+                <ChevronRight className="h-4 w-4 text-muted" />
+              </span>
+              <span className="mt-0.5 block text-sm text-muted">
+                View, edit, or delete past workouts.
+              </span>
+            </span>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Overview preview */}
+      <Link href="/fitness/overview" className="block">
+        <Card className="panel-hover">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-accent" />
+              <span className="font-semibold">Overview</span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted" />
+          </div>
+          <FitnessOverviewPreview />
         </Card>
       </Link>
 
-      {/* Overview preview */}
-      <Card>
-        <Link
-          href="/fitness/overview"
-          className="mb-4 flex items-center justify-between"
-        >
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-accent" />
-            <span className="font-semibold">Overview</span>
-          </div>
-          <ChevronRight className="h-5 w-5 text-muted" />
-        </Link>
-        <FitnessOverviewPreview />
-      </Card>
-
       {/* Plans preview */}
-      <Card>
+      <Card className="panel-hover cursor-pointer">
         <Link
           href="/fitness/plans"
           className="mb-4 flex items-center justify-between"
@@ -98,42 +126,45 @@ export default async function FitnessPage() {
       </Card>
 
       {/* Exercise history preview */}
-      <Card>
-        <Link
-          href="/fitness/history"
-          className="mb-4 flex items-center justify-between"
-        >
-          <div className="flex items-center gap-2">
-            <BarChart2 className="h-4 w-4 text-accent" />
-            <span className="font-semibold">Exercise history</span>
-          </div>
-          <ChevronRight className="h-5 w-5 text-muted" />
-        </Link>
-        {recentExercises.length > 0 ? (
-          <div>
-            <p className="mb-2.5 text-xs font-medium text-muted uppercase tracking-wide">
-              Recently logged
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {recentExercises.map((name) => (
-                <span
-                  key={name}
-                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium"
-                >
-                  {name}
-                </span>
-              ))}
+      <Link href="/fitness/history" className="block">
+        <Card className="panel-hover">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-accent" />
+              <span className="font-semibold">Exercise history</span>
             </div>
-            <p className="mt-3 text-xs text-muted">
-              Tap above to explore strength trends, volume, and consistency per exercise.
-            </p>
+            <ChevronRight className="h-5 w-5 text-muted" />
           </div>
-        ) : (
-          <p className="text-sm text-muted">
-            No exercises logged yet. Start a workout to begin tracking your history.
-          </p>
-        )}
-      </Card>
+
+          {/* Pinned lifts — squat & bench progress, side by side */}
+          <PinnedLifts lifts={pinnedLifts} />
+
+          {recentExercises.length > 0 ? (
+            <div>
+              <p className="mb-2.5 text-xs font-medium text-muted uppercase tracking-wide">
+                Recently logged
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {recentExercises.map((name) => (
+                  <span
+                    key={name}
+                    className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted">
+                Tap to explore strength trends, volume, and consistency per exercise.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              No exercises logged yet. Start a workout to begin tracking your history.
+            </p>
+          )}
+        </Card>
+      </Link>
     </div>
   );
 }

@@ -53,6 +53,7 @@ export const fitnessKeys = {
   all: ['fitness'] as const,
   exercisesAll: () => [...fitnessKeys.all, 'exercises'] as const,
   exercises: (search: string) => [...fitnessKeys.exercisesAll(), search] as const,
+  exercisesList: () => [...fitnessKeys.exercisesAll(), 'list'] as const,
   plans: () => [...fitnessKeys.all, 'plans'] as const,
   plan: (id: string) => [...fitnessKeys.all, 'plan', id] as const,
   sessions: () => [...fitnessKeys.all, 'sessions'] as const,
@@ -127,6 +128,50 @@ export async function createExercise(
   const { data, error } = await client
     .from('exercises')
     .insert({ name: input.name.trim(), category: input.category ?? null })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Full exercise dictionary for the Manage exercises screen. Pinned first, then
+// alphabetical — so the "important" lifts sit at the top.
+export async function listExercises(client: Client): Promise<Exercise[]> {
+  const { data, error } = await client
+    .from('exercises')
+    .select('*')
+    .order('pinned', { ascending: false })
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Renaming is a single UPDATE: every set/plan/history row references
+// exercise_id, so the new name propagates everywhere automatically.
+export async function renameExercise(
+  client: Client,
+  id: string,
+  name: string,
+): Promise<Exercise> {
+  const { data, error } = await client
+    .from('exercises')
+    .update({ name: name.trim() })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setExercisePinned(
+  client: Client,
+  id: string,
+  pinned: boolean,
+): Promise<Exercise> {
+  const { data, error } = await client
+    .from('exercises')
+    .update({ pinned })
+    .eq('id', id)
     .select('*')
     .single();
   if (error) throw error;

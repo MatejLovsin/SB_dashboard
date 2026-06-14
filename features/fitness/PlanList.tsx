@@ -91,10 +91,9 @@ export function PlanList() {
             <li key={plan.id}>
               <Card className="flex items-center gap-3 p-4">
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: 'var(--accent-soft)' }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-card-2"
                 >
-                  <Dumbbell className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                  <Dumbbell className="h-4 w-4 text-muted" />
                 </span>
                 <Link href={`/fitness/plans/${plan.id}`} className="min-w-0 flex-1">
                   <p className="truncate font-medium">{plan.name}</p>
@@ -102,7 +101,7 @@ export function PlanList() {
                     {plan.category && (
                       <span
                         className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-                        style={{ background: 'var(--card-2)', color: 'var(--accent)' }}
+                        style={{ background: 'var(--card-2)', color: 'var(--muted)' }}
                       >
                         {plan.category}
                       </span>
@@ -125,7 +124,7 @@ export function PlanList() {
                 <Link
                   href={`/fitness/plans/${plan.id}`}
                   aria-label={`Open ${plan.name}`}
-                  style={{ color: 'var(--accent)' }}
+                  style={{ color: 'var(--muted)' }}
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Link>

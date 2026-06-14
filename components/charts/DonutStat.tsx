@@ -50,6 +50,7 @@ export function DonutStat({
               stroke="none"
               startAngle={90}
               endAngle={-270}
+              animationDuration={900}
             >
               {data.map((_, i) => (
                 <Cell key={i} fill={colorAt(i)} />

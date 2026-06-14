@@ -105,10 +105,9 @@ export function SessionRunner() {
             <li key={plan.id}>
               <Card className="flex items-center gap-3 p-4">
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: 'var(--accent-soft)' }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-card-2"
                 >
-                  <Dumbbell className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                  <Dumbbell className="h-4 w-4 text-muted" />
                 </span>
                 <button
                   type="button"
@@ -126,8 +125,7 @@ export function SessionRunner() {
                   <Spinner />
                 ) : (
                   <ChevronRight
-                    className="h-5 w-5 shrink-0"
-                    style={{ color: 'var(--accent)' }}
+                    className="h-5 w-5 shrink-0 text-muted"
                   />
                 )}
               </Card>

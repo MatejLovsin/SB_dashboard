@@ -106,3 +106,45 @@ rename, Pin/PinOff toggle, invalidate the `…exercisesAll()` key on mutate. Rea
 `border border-border bg-card` **Manage** pill (with `Settings2` icon) next to the page
 header.
 **Applies to:** School subjects, Work boards — same row UI, swap the query module.
+
+---
+
+### Blue budget (Plan 01)
+
+**Rule:** blue (`--accent`) is reserved for active/selected state, important metric values, primary CTAs, and chart series. Hovers and resting decorative chrome use neutral colours.
+
+- `.panel-hover:hover` border → `rgba(255,255,255,.14)` (neutral hairline), never an accent tint.
+- Icon badges on resting cards → `bg-card-2 text-muted`; never `bg-accent/10 text-accent`.
+- Section/heading icons that are not currently selected → `text-muted`.
+- Inline "Open" / nav links at rest → `text-muted hover:text-accent`; reveal blue only on hover.
+- Kept blue: active nav item (`bg-accent/10 text-accent`), chart series, `StatTile` deltas, primary `Button` CTAs.
+
+**Shell frame:** root is `h-dvh overflow-hidden` (fixed frame). Sidebar is `w-52 h-full` (slim, persistent). Main content is `overflow-y-auto max-w-6xl` (only the content column scrolls; wider content area).
+
+---
+
+### Density doctrine (Plan 02)
+
+Hub pages (Home, Fitness, School, Work) are **bento instrument panels** — all key numbers and trends visible at a glance without scrolling.
+
+1. **Bento grid**: `grid grid-cols-2 lg:grid-cols-3/4 gap-4` on desktop; collapses to 1-col on mobile.
+2. **Every panel earns its space**: no bare `icon + title + chevron` link rows on hubs — each panel shows a number, sparkline, or mini chart AND is clickable.
+3. **Mini tiles**: `p-3`; hero charts keep `p-4`+. Section labels: `text-[11px] uppercase tracking-widest text-muted`.
+4. **One hero, many minis**: one large `AreaTrend` per page; the rest are `StatTile` + `Sparkline` or donut/bar minis.
+5. **Page spacing**: `space-y-4` everywhere (not `space-y-6`).
+
+---
+
+### Motion system (Plan 02)
+
+Motion tokens live in `app/globals.css` (`--ease-out-quint`, `--dur-fast/mid/slow`). All motion respects `prefers-reduced-motion` via the global guard in `globals.css`.
+
+- **`useInView`** (`lib/hooks/useInView.ts`): IntersectionObserver hook; SSR-safe (defaults to `inView=true`).
+- **`Reveal`** (`components/ui/Reveal.tsx`): fade-up wrapper for below-the-fold blocks; optional `delay` ms for stagger.
+- **`CountUp`** (`components/ui/CountUp.tsx`): animates 0 → value over `--dur-slow` on enter. All hub KPI numbers use `<CountUp>`.
+- **`ChartReveal`** (`components/charts/ChartReveal.tsx`): defers chart mount until in-view so Recharts draws on scroll. All hero `AreaTrend` charts are wrapped in `ChartReveal`.
+- **`chartAnim`** (`lib/utils/chartTheme.ts`): spread onto `<Area>`, `<Bar>`, `<Line>` — 900ms ease-out draw-in. Applied to `AreaTrend`, `BarCluster`, `SessionsPerWeekChart`. Donuts use `animationDuration={900}` on `<Pie>`. **Sparkline** and `MiniTrendChart` keep `isAnimationActive={false}`.
+- **`.stagger-fade`** (globals.css): above-the-fold KPI grids cascade in on load.
+- **`.press-flash`** (globals.css): add alongside `panel-hover` on all tappable surfaces for a tactile ring on press.
+- **`Button`**: `press-flash active:scale-[0.97]` always applied.
+- **SideNav**: animated `w-0.5 h-5 bg-accent` accent bar slides in on active item.

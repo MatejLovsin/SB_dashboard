@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
+import { chartAnim, tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
 import type { WeekBucket } from '@/lib/utils/stats';
 
 interface Props {
@@ -49,7 +49,7 @@ export function SessionsPerWeekChart({ data }: Props) {
           labelStyle={{ color: theme.muted }}
           formatter={(v) => [v ?? 0, 'sessions']}
         />
-        <Bar dataKey="count" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={32} />
+        <Bar {...chartAnim} dataKey="count" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={32} />
       </BarChart>
     </ResponsiveContainer>
   );

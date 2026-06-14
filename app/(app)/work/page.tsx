@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatTile } from '@/components/ui/StatTile';
+import { CountUp } from '@/components/ui/CountUp';
+import { Sparkline } from '@/components/charts/Sparkline';
+import { Card } from '@/components/ui/Card';
 import { KanbanBoard } from '@/features/work/KanbanBoard';
 import { WorkCharts } from '@/features/work/WorkCharts';
 import { WorkMetricLogger } from '@/features/work/WorkMetricLogger';
@@ -38,20 +42,43 @@ export default async function WorkPage() {
   const totalNotes = notes.length;
   const latestFocus = metrics.length > 0 ? metrics[metrics.length - 1].value : null;
 
+  const notesSparkline = weeklyNotes.map((p) => p.value);
+  const focusSparkline = focusSeries.map((p) => p.value);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader title="Work" description="Roadmap, decisions, and analytics." />
 
       <SummaryCard section="work" initial={summary} />
 
-      {/* KPI strip */}
-      <div className="stagger-fade grid grid-cols-3 gap-3">
-        <StatTile label="Total Cards" value={totalCards} />
-        <StatTile label="Done" value={doneCards} unit="cards" />
-        <StatTile label="Focus" value={latestFocus ?? '—'} unit={latestFocus ? '/ 10' : ''} />
+      {/* KPI strip — 4 tiles */}
+      <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label="Total cards"
+          value={<CountUp value={totalCards} />}
+        />
+        <StatTile
+          label="Done"
+          value={<CountUp value={doneCards} />}
+          unit="cards"
+        />
+        <StatTile
+          label="Focus score"
+          value={latestFocus !== null ? <CountUp value={latestFocus} decimals={1} /> : '—'}
+          unit={latestFocus !== null ? '/ 10' : ''}
+        >
+          <Sparkline data={focusSparkline} />
+        </StatTile>
+        <StatTile
+          label="Notes"
+          value={<CountUp value={totalNotes} />}
+          unit="entries"
+        >
+          <Sparkline data={notesSparkline} />
+        </StatTile>
       </div>
 
-      {/* Focus score logger */}
+      {/* Focus score logger — compact */}
       <WorkMetricLogger />
 
       {/* Kanban */}
@@ -60,22 +87,23 @@ export default async function WorkPage() {
         <KanbanBoard />
       </section>
 
-      {/* Notes link */}
-      <section>
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-muted">Decisions log</h2>
-        <Link
-          href="/work/notes"
-          className="panel panel-hover flex items-center gap-3 rounded-2xl p-4"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10">
-            <FileText className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Notes &amp; Decisions</p>
-            <p className="text-xs text-muted">{totalNotes} entries · searchable log</p>
-          </div>
-        </Link>
-      </section>
+      {/* Notes — compact stat tile with sparkline */}
+      <Link
+        href="/work/notes"
+        className="panel panel-hover press-flash flex items-center gap-4 rounded-2xl p-4"
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-card-2">
+          <FileText className="h-4 w-4 text-muted" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Notes &amp; Decisions</p>
+          <p className="text-xs text-muted">{totalNotes} entries · searchable log</p>
+        </div>
+        <div className="w-20 shrink-0">
+          <Sparkline data={notesSparkline} height={28} />
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
+      </Link>
 
       {/* Analytics */}
       <section>

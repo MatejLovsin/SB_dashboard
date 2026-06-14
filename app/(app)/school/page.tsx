@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { BookOpen, ClipboardList, ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronRight, ClipboardList } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { StatTile } from '@/components/ui/StatTile';
+import { CountUp } from '@/components/ui/CountUp';
 import { UpcomingExams } from '@/features/school/UpcomingExams';
 import { StudyTimer } from '@/features/school/StudyTimer';
 import { SchoolCharts } from '@/features/school/SchoolCharts';
@@ -45,21 +46,43 @@ export default async function SchoolPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader title="School" description="Exams, study sessions, and results." />
 
       <SummaryCard section="school" initial={summary} />
 
-      <div className="stagger-fade grid grid-cols-3 gap-3">
-        <StatTile label="This week" value={thisWeek} unit="h" delta={weekDelta} />
-        <StatTile label="Upcoming" value={upcomingExams.length} unit="exams" />
-        <StatTile label="Streak" value={streak} unit="days" />
+      {/* KPI strip — 4-col on desktop */}
+      <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label="This week"
+          value={<CountUp value={thisWeek} decimals={1} />}
+          unit="h"
+          delta={weekDelta}
+        />
+        <StatTile
+          label="Upcoming"
+          value={<CountUp value={upcomingExams.length} />}
+          unit="exams"
+        />
+        <StatTile
+          label="Streak"
+          value={<CountUp value={streak} />}
+          unit="days"
+        />
+        <StatTile
+          label="Total logged"
+          value={<CountUp value={totalHours} decimals={1} />}
+          unit="h"
+        />
       </div>
 
-      <StudyTimer />
+      {/* Timer + Upcoming side by side on desktop */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <StudyTimer />
+        <UpcomingExams />
+      </div>
 
-      <UpcomingExams />
-
+      {/* Charts */}
       <SchoolCharts
         weeklyHours={weeklyHours}
         hoursBySubject={hoursBySubject}
@@ -68,29 +91,30 @@ export default async function SchoolPage() {
         thisWeekHours={thisWeek}
       />
 
-      <div className="space-y-3">
+      {/* Compact nav tiles — replace plain link rows */}
+      <div className="grid grid-cols-2 gap-3">
         <Link href="/school/subjects" className="block">
-          <Card className="panel-hover flex items-center gap-3 p-4">
-            <span className="rounded-xl bg-accent/10 p-2.5 text-accent">
-              <BookOpen className="h-5 w-5" />
+          <Card className="panel-hover press-flash flex items-center gap-3 p-3">
+            <span className="rounded-lg bg-card-2 p-2 text-muted">
+              <BookOpen className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-medium">Subjects</span>
-              <span className="mt-0.5 block text-sm text-muted">Manage your school subjects.</span>
+              <span className="block text-sm font-medium">Subjects</span>
+              <span className="block text-xs text-muted">{subjects.length} subjects</span>
             </span>
-            <ChevronRight className="h-5 w-5 text-muted" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
           </Card>
         </Link>
         <Link href="/school/exams" className="block">
-          <Card className="panel-hover flex items-center gap-3 p-4">
-            <span className="rounded-xl bg-accent/10 p-2.5 text-accent">
-              <ClipboardList className="h-5 w-5" />
+          <Card className="panel-hover press-flash flex items-center gap-3 p-3">
+            <span className="rounded-lg bg-card-2 p-2 text-muted">
+              <ClipboardList className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-medium">Exams</span>
-              <span className="mt-0.5 block text-sm text-muted">Track upcoming exams and record grades.</span>
+              <span className="block text-sm font-medium">Exams</span>
+              <span className="block text-xs text-muted">{upcomingExams.length} upcoming</span>
             </span>
-            <ChevronRight className="h-5 w-5 text-muted" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
           </Card>
         </Link>
       </div>

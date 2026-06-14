@@ -21,8 +21,8 @@ export function WorkMetricLogger() {
 
   return (
     <div className="panel flex items-center gap-4 rounded-2xl p-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10">
-        <Zap className="h-5 w-5 text-accent" />
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card-2">
+        <Zap className="h-5 w-5 text-muted" />
       </span>
       <div className="flex-1">
         <p className="text-xs font-medium uppercase tracking-widest text-muted">Focus Score</p>

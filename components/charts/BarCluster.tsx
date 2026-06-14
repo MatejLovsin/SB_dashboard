@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
+import { chartAnim, tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
 
 export interface BarPoint {
   label: string;
@@ -102,7 +102,7 @@ export function BarCluster({
           labelStyle={{ color: theme.muted }}
           formatter={(v) => [fmt(Number(v), compact, unit), name]}
         />
-        <Bar dataKey="value" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={36}>
+        <Bar {...chartAnim} dataKey="value" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={36}>
           {graded &&
             data.map((d, i) => <Cell key={i} fill={rankColor(d.value)} />)}
         </Bar>

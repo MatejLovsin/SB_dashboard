@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
+import { chartAnim, tooltipStyle, useChartTheme } from '@/lib/utils/chartTheme';
 
 export interface AreaTrendPoint {
   /** X-axis label (already formatted, e.g. "May 04"). */
@@ -110,6 +110,7 @@ export function AreaTrend({
           formatter={(v) => [fmt(Number(v), compact, unit), name]}
         />
         <Area
+          {...chartAnim}
           type="monotone"
           dataKey="value"
           stroke={theme.accent}

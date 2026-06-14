@@ -24,7 +24,7 @@ export async function PlanListPreview() {
           href={`/fitness/plans/${plan.id}`}
           className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5 transition-colors"
         >
-          <span className="rounded-lg bg-accent/10 p-1.5 text-accent">
+          <span className="rounded-lg bg-card-2 p-1.5 text-muted">
             <Dumbbell className="h-3.5 w-3.5" />
           </span>
           <span className="min-w-0 flex-1">

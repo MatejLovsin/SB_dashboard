@@ -1,6 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, WorkoutSession, SessionSet } from '@/lib/db/types';
-import { bestSetE1RM } from '@/lib/utils/stats';
+import {
+  bestSetE1RM,
+  sessionsPerWeek,
+  currentStreakWeeks,
+  volumeForSessionIds,
+  deltaPercent,
+  mondayOf,
+} from '@/lib/utils/stats';
 
 type Client = SupabaseClient<Database>;
 
@@ -35,6 +42,61 @@ export async function getSessionSetsBySessionIds(
     .in('session_id', sessionIds);
   if (error) throw error;
   return data ?? [];
+}
+
+export type FitnessHubMetrics = {
+  volume30d: number;
+  volumeDelta: number | null;
+  weeklyVolumeSparkline: number[];
+  sessionsThisWeek: number;
+  streakWeeks: number;
+};
+
+export async function getFitnessHubMetrics(client: Client): Promise<FitnessHubMetrics> {
+  const now = new Date();
+  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 3600 * 1000).toISOString();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
+
+  const { data: sessions } = await client
+    .from('workout_sessions')
+    .select('id, performed_at')
+    .gte('performed_at', sixtyDaysAgo)
+    .order('performed_at', { ascending: true });
+
+  const sessionRows = sessions ?? [];
+
+  const setRows: Array<{ session_id: string; reps: number | null; weight: number | null; completed: boolean }> =
+    sessionRows.length > 0
+      ? ((await client
+          .from('session_sets')
+          .select('session_id, reps, weight, completed')
+          .in('session_id', sessionRows.map((s) => s.id))).data ?? [])
+      : [];
+
+  const current30dIds = new Set(sessionRows.filter((s) => s.performed_at >= thirtyDaysAgo).map((s) => s.id));
+  const prev30dIds = new Set(sessionRows.filter((s) => s.performed_at < thirtyDaysAgo).map((s) => s.id));
+  const volume30d = volumeForSessionIds(current30dIds, setRows);
+  const volumePrev = volumeForSessionIds(prev30dIds, setRows);
+
+  const thisMonday = mondayOf(now);
+  const sessionsThisWeek = sessionRows.filter((s) => mondayOf(new Date(s.performed_at)) === thisMonday).length;
+  const streakWeeks = currentStreakWeeks(sessionRows);
+
+  const buckets = sessionsPerWeek(sessionRows, 8);
+  const weeklyVolumeSparkline: number[] = buckets.map(({ weekStart }) => {
+    const weekIds = new Set(
+      sessionRows.filter((s) => mondayOf(new Date(s.performed_at)) === weekStart).map((s) => s.id),
+    );
+    return volumeForSessionIds(weekIds, setRows);
+  });
+
+  return {
+    volume30d,
+    volumeDelta: deltaPercent(volume30d, volumePrev),
+    weeklyVolumeSparkline,
+    sessionsThisWeek,
+    streakWeeks,
+  };
 }
 
 export type PinnedLiftPoint = { date: string; e1rm: number };

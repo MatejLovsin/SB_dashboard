@@ -284,7 +284,7 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4">
+    <div className="stagger-fade flex gap-3 overflow-x-auto pb-4">
       {COLUMNS.map(({ status, label, color }) => {
         const columnCards = cards
           .filter((c) => c.status === status)

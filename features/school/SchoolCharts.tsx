@@ -1,6 +1,7 @@
 'use client';
 
 import { ChartCard } from '@/components/charts/ChartCard';
+import { ChartReveal } from '@/components/charts/ChartReveal';
 import { AreaTrend, type AreaTrendPoint } from '@/components/charts/AreaTrend';
 import { DonutStat, type DonutSlice } from '@/components/charts/DonutStat';
 import { BarCluster, type BarPoint } from '@/components/charts/BarCluster';
@@ -23,7 +24,9 @@ export function SchoolCharts({
   return (
     <div className="space-y-4">
       <ChartCard title="Weekly study hours" value={`${thisWeekHours}h this week`}>
-        <AreaTrend data={weeklyHours} unit="h" name="Hours" height={200} />
+        <ChartReveal height={200}>
+          <AreaTrend data={weeklyHours} unit="h" name="Hours" height={200} />
+        </ChartReveal>
       </ChartCard>
 
       {hoursBySubject.length > 0 && (

@@ -7,6 +7,7 @@ import { DonutStat } from '@/components/charts/DonutStat';
 import { BarCluster } from '@/components/charts/BarCluster';
 import { AreaTrend } from '@/components/charts/AreaTrend';
 import { ChartCard } from '@/components/charts/ChartCard';
+import { ChartReveal } from '@/components/charts/ChartReveal';
 
 interface WorkChartsProps {
   cardsByStatus: DonutSlice[];
@@ -40,11 +41,15 @@ export function WorkCharts({
       </div>
 
       <ChartCard title="Notes per Week">
-        <AreaTrend data={notesPerWeek} height={200} name="notes" />
+        <ChartReveal height={200}>
+          <AreaTrend data={notesPerWeek} height={200} name="notes" />
+        </ChartReveal>
       </ChartCard>
 
       <ChartCard title="Avg Focus Score" value={focusScoreSeries.at(-1)?.value ?? 0} action={<span className="text-xs text-muted">/ 10</span>}>
-        <AreaTrend data={focusScoreSeries} height={200} name="focus score" />
+        <ChartReveal height={200}>
+          <AreaTrend data={focusScoreSeries} height={200} name="focus score" />
+        </ChartReveal>
       </ChartCard>
     </div>
   );

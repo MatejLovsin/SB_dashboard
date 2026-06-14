@@ -77,6 +77,13 @@ export function useChartTheme(): ChartTheme {
   return theme;
 }
 
+/** Standard animation config for Recharts series — spread onto Area/Bar/Line. */
+export const chartAnim = {
+  isAnimationActive: true,
+  animationDuration: 900,
+  animationEasing: 'ease-out' as const,
+} as const;
+
 /** Shared tooltip style for Recharts `contentStyle`. */
 export function tooltipStyle(theme: ChartTheme) {
   return {

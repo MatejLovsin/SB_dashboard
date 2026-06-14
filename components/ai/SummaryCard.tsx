@@ -46,7 +46,7 @@ export function SummaryCard({ section, initial }: Props) {
     <Card className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Sparkles className="h-4 w-4 text-accent" />
+          <Sparkles className="h-4 w-4 text-muted" />
           <span className="text-sm font-semibold">AI Summary</span>
         </div>
         <Button variant="ghost" size="sm" onClick={regenerate} disabled={loading}>

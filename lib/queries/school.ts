@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Subject, Exam, StudySession } from '@/lib/db/types';
+import type { Database, Subject, Exam, StudySession, DiscardedStudySession } from '@/lib/db/types';
 import { mondayOf } from '@/lib/utils/stats';
 
 type Client = SupabaseClient<Database>;
@@ -10,9 +10,18 @@ export const schoolKeys = {
   exams: (filter?: { upcoming?: boolean }) => [...schoolKeys.all, 'exams', filter ?? {}] as const,
   examStudyHours: (examIds: string[]) => [...schoolKeys.all, 'studyHours', examIds] as const,
   studySessions: (subjectId: string) => [...schoolKeys.all, 'studySessions', subjectId] as const,
+  allSessions: () => [...schoolKeys.all, 'allSessions'] as const,
+  discarded: () => [...schoolKeys.all, 'discarded'] as const,
 };
 
 export type SubjectInput = { name: string; color?: string | null };
+export type DiscardedSessionInput = {
+  subject_id: string;
+  exam_id?: string | null;
+  started_at: string;
+  duration_seconds: number;
+  note?: string | null;
+};
 export type StudySessionInput = {
   subject_id: string;
   exam_id?: string | null;
@@ -280,6 +289,111 @@ export function studyHoursPrevWeek(sessions: StudySession[]): number {
     if (t >= prevMondayMs && t < thisMondayMs) secs += s.duration_seconds;
   }
   return Math.round((secs / 3600) * 10) / 10;
+}
+
+// --- Discarded sessions ---
+
+export async function createDiscardedSession(
+  client: Client,
+  input: DiscardedSessionInput,
+): Promise<DiscardedStudySession> {
+  const { data, error } = await client
+    .from('discarded_study_sessions')
+    .insert({
+      subject_id: input.subject_id,
+      exam_id: input.exam_id ?? null,
+      started_at: input.started_at,
+      duration_seconds: input.duration_seconds,
+      note: input.note ?? null,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export type DiscardedSessionWithSubject = DiscardedStudySession & { subject_name: string | null };
+
+export async function listDiscardedSessions(
+  client: Client,
+): Promise<DiscardedSessionWithSubject[]> {
+  const { data, error } = await client
+    .from('discarded_study_sessions')
+    .select('*')
+    .order('discarded_at', { ascending: false });
+  if (error) throw error;
+
+  const sessions = data ?? [];
+  if (sessions.length === 0) return [];
+
+  const subjectIds = [...new Set(sessions.map((s) => s.subject_id))];
+  const { data: subjects } = await client
+    .from('subjects')
+    .select('id, name')
+    .in('id', subjectIds);
+  const subMap = new Map((subjects ?? []).map((s) => [s.id, s.name]));
+  return sessions.map((s) => ({ ...s, subject_name: subMap.get(s.subject_id) ?? null }));
+}
+
+export async function deleteDiscardedSession(client: Client, id: string): Promise<void> {
+  const { error } = await client.from('discarded_study_sessions').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function recoverDiscardedSession(
+  client: Client,
+  discarded: DiscardedStudySession,
+): Promise<StudySession> {
+  const endedAt = new Date(
+    new Date(discarded.started_at).getTime() + discarded.duration_seconds * 1000,
+  ).toISOString();
+
+  const { data, error } = await client
+    .from('study_sessions')
+    .insert({
+      subject_id: discarded.subject_id,
+      exam_id: discarded.exam_id,
+      started_at: discarded.started_at,
+      ended_at: endedAt,
+      duration_seconds: discarded.duration_seconds,
+      note: discarded.note,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+
+  await deleteDiscardedSession(client, discarded.id);
+  return data;
+}
+
+// --- All sessions (for session history page) ---
+
+export type StudySessionWithSubject = StudySession & { subject_name: string | null };
+
+export async function listAllStudySessions(
+  client: Client,
+): Promise<StudySessionWithSubject[]> {
+  const { data, error } = await client
+    .from('study_sessions')
+    .select('*')
+    .order('started_at', { ascending: false });
+  if (error) throw error;
+
+  const sessions = data ?? [];
+  if (sessions.length === 0) return [];
+
+  const subjectIds = [...new Set(sessions.map((s) => s.subject_id))];
+  const { data: subjects } = await client
+    .from('subjects')
+    .select('id, name')
+    .in('id', subjectIds);
+  const subMap = new Map((subjects ?? []).map((s) => [s.id, s.name]));
+  return sessions.map((s) => ({ ...s, subject_name: subMap.get(s.subject_id) ?? null }));
+}
+
+export async function deleteStudySession(client: Client, id: string): Promise<void> {
+  const { error } = await client.from('study_sessions').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export function studyStreakDays(sessions: StudySession[]): number {

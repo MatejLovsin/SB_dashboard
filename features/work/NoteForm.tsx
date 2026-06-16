@@ -42,7 +42,7 @@ export function NoteForm({ initial, onSubmit, onCancel, isPending }: Props) {
         value={body ?? ''}
         onChange={(e) => setBody(e.target.value)}
         placeholder="Context, reasoning, links…"
-        rows={4}
+        rows={6}
       />
 
       <Input

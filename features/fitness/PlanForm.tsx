@@ -60,7 +60,7 @@ export function PlanForm({
         label="Notes"
         value={notes ?? ''}
         placeholder="Optional notes about this plan"
-        rows={3}
+        rows={5}
         onChange={(event) => setNotes(event.target.value)}
       />
 

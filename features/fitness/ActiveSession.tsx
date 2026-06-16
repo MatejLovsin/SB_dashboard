@@ -190,7 +190,7 @@ export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
         <TextArea
           value={notes}
           placeholder="How did it go? (optional)"
-          rows={2}
+          rows={4}
           onChange={(e) => setNotes(e.target.value)}
         />
       </Card>

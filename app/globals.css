@@ -137,6 +137,33 @@ body {
   animation: press-flash 0.4s var(--ease-out-quint);
 }
 
+/* App-native scrollbar for textareas — thin, rounded, matches the navy palette. */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+textarea::-webkit-scrollbar {
+  width: 5px;
+}
+textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+textarea::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Hide scrollbar entirely while keeping overflow scroll behaviour. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Reduced-motion: snap everything instantly. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

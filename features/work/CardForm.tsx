@@ -58,7 +58,7 @@ export function CardForm({ initial, defaultStatus = 'idea', onSubmit, onCancel, 
         value={description ?? ''}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Details, links, context…"
-        rows={2}
+        rows={4}
       />
 
       <div className="flex gap-3">

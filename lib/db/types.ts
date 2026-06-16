@@ -65,9 +65,15 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['study_sessions']['Insert']>;
         Relationships: [];
       };
+      discarded_study_sessions: {
+        Row: { id: string; user_id: string; subject_id: string; exam_id: string | null; started_at: string; duration_seconds: number; note: string | null; discarded_at: string; created_at: string };
+        Insert: { id?: string; user_id?: string; subject_id: string; exam_id?: string | null; started_at: string; duration_seconds: number; note?: string | null; discarded_at?: string; created_at?: string };
+        Update: Partial<Database['public']['Tables']['discarded_study_sessions']['Insert']>;
+        Relationships: [];
+      };
       roadmap_cards: {
-        Row: { id: string; user_id: string; title: string; description: string | null; status: RoadmapStatus; priority: Priority | null; position: number; updated_at: string } & Timestamps;
-        Insert: { id?: string; user_id?: string; title: string; description?: string | null; status?: RoadmapStatus; priority?: Priority | null; position?: number; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; title: string; description: string | null; status: RoadmapStatus; priority: Priority | null; position: number; done_at: string | null; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; title: string; description?: string | null; status?: RoadmapStatus; priority?: Priority | null; position?: number; done_at?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['roadmap_cards']['Insert']>;
         Relationships: [];
       };
@@ -119,6 +125,7 @@ export type SessionSet = Tables<'session_sets'>;
 export type Subject = Tables<'subjects'>;
 export type Exam = Tables<'exams'>;
 export type StudySession = Tables<'study_sessions'>;
+export type DiscardedStudySession = Tables<'discarded_study_sessions'>;
 export type RoadmapCard = Tables<'roadmap_cards'>;
 export type Note = Tables<'notes'>;
 export type WorkMetric = Tables<'work_metrics'>;

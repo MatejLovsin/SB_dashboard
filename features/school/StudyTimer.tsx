@@ -7,7 +7,9 @@ import {
   listSubjects,
   listExams,
   createStudySession,
+  createDiscardedSession,
   type StudySessionInput,
+  type DiscardedSessionInput,
 } from '@/lib/queries/school';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -109,12 +111,33 @@ export function StudyTimer() {
     setPhase('saving');
   }
 
+  const discardMut = useMutation({
+    mutationFn: (input: DiscardedSessionInput) => createDiscardedSession(supabase, input),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: schoolKeys.discarded() });
+      accumulatedRef.current = 0;
+      setElapsed(0);
+      setNote('');
+      setPhase('idle');
+    },
+  });
+
   function handleDiscard() {
     stopInterval();
-    accumulatedRef.current = 0;
-    setElapsed(0);
-    setNote('');
-    setPhase('idle');
+    if (elapsed > 0 && subjectId) {
+      discardMut.mutate({
+        subject_id: subjectId,
+        exam_id: examId || null,
+        started_at: startedAtRef.current,
+        duration_seconds: elapsed,
+        note: note.trim() || null,
+      });
+    } else {
+      accumulatedRef.current = 0;
+      setElapsed(0);
+      setNote('');
+      setPhase('idle');
+    }
   }
 
   const saveMut = useMutation({
@@ -227,8 +250,7 @@ export function StudyTimer() {
 
           <TextArea
             placeholder="Session notes (optional)"
-            rows={3}
-            className="resize-none"
+            rows={5}
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -241,9 +263,9 @@ export function StudyTimer() {
               variant="ghost"
               className="flex-1"
               onClick={handleDiscard}
-              disabled={saveMut.isPending}
+              disabled={saveMut.isPending || discardMut.isPending}
             >
-              Discard
+              {discardMut.isPending ? 'Saving…' : 'Discard'}
             </Button>
           </div>
 

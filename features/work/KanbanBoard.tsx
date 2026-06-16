@@ -117,7 +117,8 @@ function KanbanColumn({
 
       {/* Cards */}
       <div
-        className="flex flex-1 flex-col gap-2"
+        className="no-scrollbar flex flex-col gap-2 overflow-y-auto"
+        style={{ maxHeight: '300px' }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleColumnDrop}
       >
@@ -155,32 +156,30 @@ function KanbanColumn({
                     {card.description && (
                       <p className="mt-1 text-xs text-muted line-clamp-2">{card.description}</p>
                     )}
-                    {card.priority && (
-                      <div className="mt-2">
-                        <PriorityChip priority={card.priority} />
+                    <div className="mt-2 flex items-center justify-between gap-1">
+                      <PriorityChip priority={card.priority} />
+                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setEditingId(card.id)}
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => onDeleteCard(card.id)}
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-                <div className="mt-2 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => setEditingId(card.id)}
-                    aria-label="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onDeleteCard(card.id)}
-                    aria-label="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
                 </div>
               </div>
             )}

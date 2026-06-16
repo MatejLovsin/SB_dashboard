@@ -36,7 +36,14 @@ export async function listCards(client: Client): Promise<RoadmapCard[]> {
     .order('status')
     .order('position');
   if (error) throw error;
-  return data ?? [];
+
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  return (data ?? []).filter((card) => {
+    if (card.status !== 'done') return true;
+    // done cards without a timestamp are kept (pre-migration rows)
+    if (!card.done_at) return true;
+    return new Date(card.done_at).getTime() > oneWeekAgo;
+  });
 }
 
 export async function createCard(client: Client, input: CardInput): Promise<RoadmapCard> {

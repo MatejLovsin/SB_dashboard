@@ -238,7 +238,7 @@ export function SessionEditor({ sessionId }: SessionEditorProps) {
         <TextArea
           value={notes}
           placeholder="How did it go? (optional)"
-          rows={2}
+          rows={4}
           onChange={(e) => setNotes(e.target.value)}
           onBlur={() => updateMetaMutation.mutate({ notes: notes.trim() || null })}
         />

@@ -15,7 +15,9 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { CardForm } from './CardForm';
+import { CardDetail } from './CardDetail';
 
 const COLUMNS: { status: RoadmapStatus; label: string; color: string }[] = [
   { status: 'idea', label: 'Idea', color: 'bg-[var(--accent-soft)] text-[var(--muted)]' },
@@ -64,6 +66,11 @@ function KanbanColumn({
 }: KanbanColumnProps) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [focusCard, setFocusCard] = useState<RoadmapCard | null>(null);
+  // Retain the last focused card so its content stays visible during the exit animation.
+  const lastFocusCard = useRef<RoadmapCard | null>(null);
+  if (focusCard) lastFocusCard.current = focusCard;
+  const displayCard = focusCard ?? lastFocusCard.current;
   const draggedId = useRef<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -143,6 +150,7 @@ function KanbanColumn({
                 onDragOver={(e) => handleDragOver(e, card.id)}
                 onDrop={(e) => handleDrop(e, card.id)}
                 onDragEnd={() => setDragOverId(null)}
+                onClick={() => setFocusCard(card)}
                 className={`group cursor-grab rounded-xl border p-3 transition-all active:cursor-grabbing ${
                   dragOverId === card.id
                     ? 'border-accent/60 bg-[var(--card-2)] ring-1 ring-accent/30'
@@ -163,7 +171,7 @@ function KanbanColumn({
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => setEditingId(card.id)}
+                          onClick={(e) => { e.stopPropagation(); setEditingId(card.id); }}
                           aria-label="Edit"
                         >
                           <Pencil className="h-3 w-3" />
@@ -172,7 +180,7 @@ function KanbanColumn({
                           variant="danger"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => onDeleteCard(card.id)}
+                          onClick={(e) => { e.stopPropagation(); onDeleteCard(card.id); }}
                           aria-label="Delete"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -186,6 +194,33 @@ function KanbanColumn({
           </div>
         ))}
       </div>
+
+      {/* Focus overlay */}
+      <FocusOverlay
+        open={!!focusCard}
+        onClose={() => setFocusCard(null)}
+        title={displayCard?.title}
+        label={displayCard ? `Card: ${displayCard.title}` : 'Card'}
+        action={
+          displayCard ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Edit card"
+              onClick={() => {
+                const c = displayCard;
+                setFocusCard(null);
+                setEditingId(c.id);
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          ) : null
+        }
+      >
+        {displayCard && <CardDetail card={displayCard} />}
+      </FocusOverlay>
 
       {/* Add card */}
       <div className="mt-3">

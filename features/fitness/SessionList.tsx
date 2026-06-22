@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Dumbbell, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ChevronRight, Dumbbell, Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { fitnessKeys } from '@/lib/queries/fitness';
 import { listSessions, getSessionSetsBySessionIds } from '@/lib/queries/analytics';
@@ -12,6 +13,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FocusOverlay } from '@/components/ui/FocusOverlay';
+import { FitnessSessionDetail } from './FitnessSessionDetail';
 
 function formatDate(iso: string): string {
   return new Date(iso.slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-US', {
@@ -27,6 +30,12 @@ export function SessionList() {
   const supabase = createClient();
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
+  // Retain the last focused id so content stays visible during the exit animation.
+  const lastFocusSessionId = useRef<string | null>(null);
+  if (focusSessionId) lastFocusSessionId.current = focusSessionId;
+  const displayId = focusSessionId ?? lastFocusSessionId.current;
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: [...fitnessKeys.sessions(), 'with-counts'],
@@ -88,7 +97,7 @@ export function SessionList() {
                   <button
                     type="button"
                     className="min-w-0 flex-1 text-left"
-                    onClick={() => router.push(`/fitness/sessions/${session.id}`)}
+                    onClick={() => setFocusSessionId(session.id)}
                   >
                     <p className="truncate font-medium">{session.title ?? 'Workout'}</p>
                     <p className="mt-0.5 text-xs text-muted">
@@ -104,7 +113,8 @@ export function SessionList() {
                     className="shrink-0 rounded-lg p-1.5 text-muted transition-colors hover:text-red-500 disabled:opacity-40"
                     disabled={isDeleting}
                     aria-label="Delete session"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (
                         confirm(
                           `Delete "${session.title ?? 'Workout'}"? All sets will be lost.`,
@@ -119,7 +129,7 @@ export function SessionList() {
 
                   <ChevronRight
                     className="h-4 w-4 shrink-0 text-muted"
-                    onClick={() => router.push(`/fitness/sessions/${session.id}`)}
+                    onClick={() => setFocusSessionId(session.id)}
                   />
                 </Card>
               </li>
@@ -127,6 +137,32 @@ export function SessionList() {
           })}
         </ul>
       )}
+
+      <FocusOverlay
+        open={!!focusSessionId}
+        onClose={() => setFocusSessionId(null)}
+        title={displayId ? (data?.sessions.find((s) => s.id === displayId)?.title ?? 'Workout') : undefined}
+        label="Workout"
+        action={
+          displayId ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Edit session"
+              onClick={() => {
+                const id = displayId;
+                setFocusSessionId(null);
+                router.push(`/fitness/sessions/${id}`);
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          ) : null
+        }
+      >
+        {displayId && <FitnessSessionDetail sessionId={displayId} />}
+      </FocusOverlay>
     </div>
   );
 }

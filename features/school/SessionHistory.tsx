@@ -1,4 +1,5 @@
 'use client';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -10,6 +11,8 @@ import {
 } from '@/lib/queries/school';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { FocusOverlay } from '@/components/ui/FocusOverlay';
+import { StudySessionDetail } from './StudySessionDetail';
 
 function fmtDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -28,6 +31,11 @@ function fmtDatetime(iso: string): string {
 export function SessionHistory() {
   const supabase = createClient();
   const qc = useQueryClient();
+  const [focusSession, setFocusSession] = useState<StudySessionWithSubject | null>(null);
+  // Retain the last focused session so its content stays put during the exit animation.
+  const lastFocusSession = useRef<StudySessionWithSubject | null>(null);
+  if (focusSession) lastFocusSession.current = focusSession;
+  const displaySession = focusSession ?? lastFocusSession.current;
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: schoolKeys.allSessions(),
@@ -73,7 +81,16 @@ export function SessionHistory() {
       {sessions.map((session) => (
         <div
           key={session.id}
-          className="rounded-2xl border border-border bg-card p-4"
+          role="button"
+          tabIndex={0}
+          onClick={() => setFocusSession(session)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setFocusSession(session);
+            }
+          }}
+          className="group cursor-pointer rounded-2xl border border-border bg-card p-4 transition-colors hover:border-accent/30"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -100,13 +117,25 @@ export function SessionHistory() {
               className="h-8 w-8 shrink-0"
               aria-label="Delete session"
               disabled={deleteMut.isPending}
-              onClick={() => deleteMut.mutate(session.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteMut.mutate(session.id);
+              }}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
       ))}
+
+      <FocusOverlay
+        open={!!focusSession}
+        onClose={() => setFocusSession(null)}
+        title={displaySession ? (displaySession.subject_name ?? 'Unknown subject') : undefined}
+        label={displaySession ? `Study Session: ${displaySession.subject_name ?? 'Unknown'}` : 'Study Session'}
+      >
+        {displaySession && <StudySessionDetail session={displaySession} />}
+      </FocusOverlay>
     </div>
   );
 }

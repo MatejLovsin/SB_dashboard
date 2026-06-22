@@ -14,10 +14,11 @@ interface Props {
   studySeconds?: number;
   onEdit: () => void;
   onDelete: () => void;
+  onOpen?: () => void;
   isDeleting?: boolean;
 }
 
-export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, isDeleting }: Props) {
+export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, onOpen, isDeleting }: Props) {
   const days = daysUntil(exam.exam_date);
   const isUpcoming = days >= 0;
   const progress = exam.target_study_hours
@@ -25,7 +26,18 @@ export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, isDeleting 
     : null;
 
   return (
-    <Card className="space-y-2 p-4">
+    <Card
+      className="space-y-2 p-4 cursor-pointer transition-colors hover:border-accent/30"
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen?.();
+        }
+      }}
+    >
       <div className="flex items-start gap-2">
         {exam.subject?.color && (
           <span
@@ -42,13 +54,18 @@ export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, isDeleting 
           )}
         </div>
         <div className="flex shrink-0 gap-1">
-          <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Edit">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            aria-label="Edit"
+          >
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={onDelete}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
             disabled={isDeleting}
             aria-label="Delete"
             className="text-red-500 hover:text-red-600 dark:text-red-400"

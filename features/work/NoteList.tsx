@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Pencil, Trash2, FileText } from 'lucide-react';
 import type { Note } from '@/lib/db/types';
@@ -9,14 +9,18 @@ import { inputClasses } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { NoteForm } from './NoteForm';
+import { NoteDetail } from './NoteDetail';
 
 function NoteRow({
   note,
+  onOpen,
   onEdit,
   onDelete,
 }: {
   note: Note;
+  onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -27,7 +31,18 @@ function NoteRow({
   });
 
   return (
-    <div className="group rounded-2xl border border-border bg-[var(--surface)] p-4 transition-colors hover:border-accent/30">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="group cursor-pointer rounded-2xl border border-border bg-[var(--surface)] p-4 transition-colors hover:border-accent/30"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-semibold leading-snug">{note.title}</p>
@@ -37,10 +52,22 @@ function NoteRow({
           <p className="mt-2 text-xs text-muted">{date}</p>
         </div>
         <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} aria-label="Edit">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            aria-label="Edit"
+          >
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="danger" size="icon" className="h-8 w-8" onClick={onDelete} aria-label="Delete">
+          <Button
+            variant="danger"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            aria-label="Delete"
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -57,6 +84,11 @@ export function NoteList() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [adding, setAdding] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [focusNote, setFocusNote] = useState<Note | null>(null);
+  // Retain the last focused note so its content stays put during the exit animation.
+  const lastFocusNote = useRef<Note | null>(null);
+  if (focusNote) lastFocusNote.current = focusNote;
+  const displayNote = focusNote ?? lastFocusNote.current;
 
   // Debounce search
   function handleSearch(value: string) {
@@ -160,6 +192,7 @@ export function NoteList() {
               <NoteRow
                 key={note.id}
                 note={note}
+                onOpen={() => setFocusNote(note)}
                 onEdit={() => { setEditingNote(note); setAdding(false); }}
                 onDelete={() => deleteMutation.mutate(note.id)}
               />
@@ -167,6 +200,33 @@ export function NoteList() {
           )}
         </div>
       )}
+
+      <FocusOverlay
+        open={!!focusNote}
+        onClose={() => setFocusNote(null)}
+        title={displayNote?.title}
+        label={displayNote ? `Note: ${displayNote.title}` : 'Note'}
+        action={
+          displayNote ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Edit note"
+              onClick={() => {
+                const n = displayNote;
+                setFocusNote(null);
+                setEditingNote(n);
+                setAdding(false);
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          ) : null
+        }
+      >
+        {displayNote && <NoteDetail note={displayNote} />}
+      </FocusOverlay>
     </div>
   );
 }

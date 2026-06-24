@@ -62,6 +62,7 @@ export const fitnessKeys = {
   exerciseHistory: (exerciseId: string) =>
     [...fitnessKeys.all, 'exercise-history', exerciseId] as const,
   bodyMetrics: () => [...fitnessKeys.all, 'body-metrics'] as const,
+  exerciseLibrary: () => [...fitnessKeys.all, 'exercise-library'] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -171,6 +172,21 @@ export async function setExercisePinned(
   const { data, error } = await client
     .from('exercises')
     .update({ pinned })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateExerciseNotes(
+  client: Client,
+  id: string,
+  notes: string,
+): Promise<Exercise> {
+  const { data, error } = await client
+    .from('exercises')
+    .update({ notes: notes.trim() === '' ? null : notes })
     .eq('id', id)
     .select('*')
     .single();

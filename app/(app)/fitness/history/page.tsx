@@ -1,5 +1,5 @@
-import { ExerciseHistory } from '@/features/fitness/ExerciseHistory';
+import { ExerciseLibrary } from '@/features/fitness/ExerciseLibrary';
 
-export default function ExerciseHistoryPage() {
-  return <ExerciseHistory />;
+export default function ExercisesPage() {
+  return <ExerciseLibrary />;
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BarChart2, ChevronRight, ClipboardList, History, Play, TrendingUp } from 'lucide-react';
+import { BarChart2, ChevronRight, ClipboardList, Columns3, History, Play, TrendingUp } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { StatTile } from '@/components/ui/StatTile';
@@ -90,7 +90,7 @@ export default async function FitnessPage() {
       </div>
 
       {/* Primary actions — side-by-side, whole tile clickable */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         <Link href="/fitness/log" className="block">
           <Card className="panel-hover press-flash flex h-full flex-col gap-4 bg-accent p-4 text-white">
             <span className="w-fit rounded-xl bg-white/20 p-2.5">
@@ -101,7 +101,7 @@ export default async function FitnessPage() {
                 Start workout
                 <ChevronRight className="h-4 w-4 text-white/80" />
               </span>
-              <span className="mt-0.5 block text-sm text-white/80">
+              <span className="mt-0.5 hidden text-sm text-white/80 sm:block">
                 Pick a plan and log your sets.
               </span>
             </span>
@@ -118,8 +118,25 @@ export default async function FitnessPage() {
                 Session log
                 <ChevronRight className="h-4 w-4 text-muted" />
               </span>
-              <span className="mt-0.5 block text-sm text-muted">
+              <span className="mt-0.5 hidden text-sm text-muted sm:block">
                 View, edit, or delete past workouts.
+              </span>
+            </span>
+          </Card>
+        </Link>
+
+        <Link href="/fitness/compare" className="block">
+          <Card className="panel-hover press-flash flex h-full flex-col gap-4 p-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card-2">
+              <Columns3 className="h-5 w-5 text-muted" />
+            </span>
+            <span className="block">
+              <span className="flex items-center gap-1 font-semibold">
+                Compare
+                <ChevronRight className="h-4 w-4 text-muted" />
+              </span>
+              <span className="mt-0.5 hidden text-sm text-muted sm:block">
+                Last 3 by category.
               </span>
             </span>
           </Card>

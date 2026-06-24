@@ -8,6 +8,8 @@ import {
   deltaPercent,
   mondayOf,
 } from '@/lib/utils/stats';
+import type { SessionWithSets } from './fitness';
+import { getSessionWithSets } from './sessions';
 
 type Client = SupabaseClient<Database>;
 
@@ -100,6 +102,19 @@ export async function getFitnessHubMetrics(client: Client): Promise<FitnessHubMe
 }
 
 export type PinnedLiftPoint = { date: string; e1rm: number };
+
+export type ExerciseLibraryEntry = {
+  id: string;
+  name: string;
+  category: string | null;
+  notes: string | null;
+  pinned: boolean;
+  sessionCount: number;       // distinct sessions this exercise appears in
+  bestE1RM: number;           // rounded kg, 0 if never logged
+  lastPerformed: string | null; // ISO of latest session, null if never
+  sparkline: PinnedLiftPoint[]; // est-1RM per session, oldest→newest, last 8 points
+};
+
 export type PinnedLiftTrend = {
   exercise: { id: string; name: string };
   points: PinnedLiftPoint[];
@@ -177,4 +192,175 @@ export async function getExerciseHistory(
   return sessionRows
     .map((s) => pointMap.get(s.id))
     .filter((p): p is ExerciseSessionPoint => p !== undefined);
+}
+
+export type SessionCategory = { key: string; label: string; count: number };
+
+/**
+ * Distinct workout categories that have at least one logged session, derived from
+ * the *plan's* `category` (Push/Pull/Legs…) — not the session title. A category can
+ * span several plans (e.g. "Push A" + "Push B"), and every session of those plans
+ * rolls up under it. Sessions with no plan, or whose plan has no category, are skipped.
+ */
+export async function listSessionCategories(client: Client): Promise<SessionCategory[]> {
+  const [{ data: plans, error: plansError }, { data: sessions, error: sessionsError }] =
+    await Promise.all([
+      client.from('workout_plans').select('id, category'),
+      client
+        .from('workout_sessions')
+        .select('plan_id, performed_at')
+        .not('plan_id', 'is', null)
+        .order('performed_at', { ascending: false }),
+    ]);
+  if (plansError) throw plansError;
+  if (sessionsError) throw sessionsError;
+
+  // plan id → raw category (skip plans with no category)
+  const categoryByPlan = new Map<string, string>();
+  for (const plan of plans ?? []) {
+    if (plan.category != null && plan.category.trim() !== '') {
+      categoryByPlan.set(plan.id, plan.category.trim());
+    }
+  }
+
+  const categoryMap = new Map<string, { label: string; count: number }>();
+  for (const session of sessions ?? []) {
+    if (!session.plan_id) continue;
+    const raw = categoryByPlan.get(session.plan_id);
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    const existing = categoryMap.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      // Sessions arrive newest-first, so the first casing seen is the most recent.
+      categoryMap.set(key, { label: raw, count: 1 });
+    }
+  }
+
+  return Array.from(categoryMap.entries())
+    .map(([key, { label, count }]) => ({ key, label, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+/**
+ * The most recent `limit` sessions belonging to any plan in the given category
+ * (case-insensitive match on the plan's `category`), newest-first, with full sets.
+ */
+export async function getRecentSessionsByCategory(
+  client: Client,
+  categoryLabel: string,
+  limit = 3,
+): Promise<SessionWithSets[]> {
+  // Plans in this category (ilike with no wildcards = case-insensitive exact match).
+  const { data: plans, error: plansError } = await client
+    .from('workout_plans')
+    .select('id')
+    .ilike('category', categoryLabel);
+  if (plansError) throw plansError;
+
+  const planIds = (plans ?? []).map((p) => p.id);
+  if (planIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from('workout_sessions')
+    .select('id')
+    .in('plan_id', planIds)
+    .order('performed_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  return Promise.all(rows.map((row) => getSessionWithSets(client, row.id)));
+}
+
+export async function getExerciseLibrary(client: Client): Promise<ExerciseLibraryEntry[]> {
+  const { data: exercises, error: exercisesError } = await client
+    .from('exercises')
+    .select('id, name, category, notes, pinned');
+  if (exercisesError) throw exercisesError;
+
+  const { data: sets, error: setsError } = await client
+    .from('session_sets')
+    .select('exercise_id, session_id, reps, weight, completed');
+  if (setsError) throw setsError;
+
+  const { data: sessions, error: sessionsError } = await client
+    .from('workout_sessions')
+    .select('id, performed_at');
+  if (sessionsError) throw sessionsError;
+
+  const performedAt = new Map<string, string>();
+  for (const session of sessions ?? []) {
+    performedAt.set(session.id, session.performed_at);
+  }
+
+  // Group sets by exercise_id then by session_id
+  type SetRow = { exercise_id: string; session_id: string; reps: number | null; weight: number | null; completed: boolean };
+  const byExercise = new Map<string, Map<string, SetRow[]>>();
+  for (const set of (sets ?? []) as SetRow[]) {
+    let bySession = byExercise.get(set.exercise_id);
+    if (!bySession) {
+      bySession = new Map();
+      byExercise.set(set.exercise_id, bySession);
+    }
+    let sessionSets = bySession.get(set.session_id);
+    if (!sessionSets) {
+      sessionSets = [];
+      bySession.set(set.session_id, sessionSets);
+    }
+    sessionSets.push(set);
+  }
+
+  const entries: ExerciseLibraryEntry[] = (exercises ?? []).map((exercise) => {
+    const bySession = byExercise.get(exercise.id);
+    if (!bySession || bySession.size === 0) {
+      return {
+        ...exercise,
+        sessionCount: 0,
+        bestE1RM: 0,
+        lastPerformed: null,
+        sparkline: [],
+      };
+    }
+
+    const sessionPoints: { sessionId: string; performedAt: string; e1rm: number }[] = [];
+    for (const [sessionId, sessionSets] of bySession.entries()) {
+      const iso = performedAt.get(sessionId);
+      if (!iso) continue;
+      const e1rm = bestSetE1RM(sessionSets);
+      sessionPoints.push({ sessionId, performedAt: iso, e1rm });
+    }
+
+    sessionPoints.sort((a, b) => a.performedAt.localeCompare(b.performedAt));
+
+    const sessionCount = sessionPoints.length;
+    const bestE1RM = sessionCount > 0
+      ? Math.round(Math.max(...sessionPoints.map((p) => p.e1rm)))
+      : 0;
+    const lastPerformed = sessionCount > 0
+      ? sessionPoints[sessionPoints.length - 1].performedAt
+      : null;
+    const sparkline: PinnedLiftPoint[] = sessionPoints
+      .slice(-8)
+      .map((p) => ({ date: p.performedAt, e1rm: Math.round(p.e1rm) }));
+
+    return {
+      ...exercise,
+      sessionCount,
+      bestE1RM,
+      lastPerformed,
+      sparkline,
+    };
+  });
+
+  return entries.sort((a, b) => {
+    if (b.sessionCount !== a.sessionCount) return b.sessionCount - a.sessionCount;
+    return a.name.localeCompare(b.name);
+  });
 }

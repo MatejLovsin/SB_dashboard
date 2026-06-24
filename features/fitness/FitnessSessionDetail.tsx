@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getSessionWithSets } from '@/lib/queries/sessions';
+import { type SessionWithSets } from '@/lib/queries/fitness';
 import { Spinner } from '@/components/ui/Spinner';
 
 /**
@@ -38,6 +39,10 @@ export function FitnessSessionDetail({ sessionId }: { sessionId: string }) {
 
   if (!data) return null;
 
+  return <SessionDetailBody data={data} />;
+}
+
+export function SessionDetailBody({ data }: { data: SessionWithSets }) {
   const { session, groups } = data;
 
   // Summary stats — prefer completed sets, but fall back to all logged sets so a

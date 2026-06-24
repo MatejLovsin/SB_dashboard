@@ -18,9 +18,19 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 No active redesign tasks. Next work: new features or content updates.
 
 ### Fitness features shipped (patterns logged in DESIGN_GUIDE → Approved feature patterns)
+- [x] **Exercise library** — `/fitness/history` (component `ExerciseLibrary`) replaces the old
+  search-only "Exercise history". Browse mode lists **every** exercise in a responsive grid
+  (`grid-cols-1 lg:grid-cols-2`), ordered **most-used first**, each card showing best est-1RM,
+  session count, last-done date, and an e1RM sparkline. Click → `ExerciseDetail`: headline
+  StatTiles, **editable per-exercise notes** (`exercises.notes`, no migration), e1RM trend +
+  volume + consistency charts, pin toggle, and a "Most used in" top-5 session list (links to
+  `/fitness/sessions/[id]`). Data: `getExerciseLibrary` in `analytics.ts` (one pass over
+  exercises/session_sets/sessions → per-exercise stats + 8-pt sparkline); `updateExerciseNotes`
+  in `fitness.ts`. Old `ExerciseHistory.tsx` deleted.
 - [x] **Pinned lifts** — `exercises.pinned` flag (migration `0006`); squat+bench seeded.
 - [x] **Rename / pin exercises** — `/fitness/exercises` Manage screen (`ExerciseManager`).
 - [x] **Fitness KPI strip** — volume 30d, sessions this week, streak, best est-1RM (via `getFitnessHubMetrics` in `analytics.ts`).
+- [x] **Compare sessions** — `/fitness/compare`: pick a category and view its last 3 sessions side-by-side. **Category = the plan's `category`** (Push/Pull/Legs, grouped case-insensitively), so multiple plans in one category (e.g. "Push A" + "Push B") roll up together and let you compare lifts across them. Sessions link via `plan_id`; manual/plan-less sessions are excluded. Reuses the read-only `SessionDetailBody` (extracted from `FitnessSessionDetail`), with the session title shown above each column. Queries `listSessionCategories` / `getRecentSessionsByCategory` in `analytics.ts`. Reached via the 3-up action grid on the fitness hub (Start workout · Session log · Compare). Mobile = snap-scroll columns; `lg` = 3-col grid. No migration.
 
 **Pending manual actions:** apply migration `0006_exercise_pins.sql` to Supabase
 (`supabase db push` / SQL editor). Until applied, the pinned section degrades gracefully.

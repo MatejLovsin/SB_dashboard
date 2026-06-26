@@ -36,7 +36,7 @@ export function DonutStat({
   return (
     <div className="flex items-center gap-4">
       <div className="relative shrink-0" style={{ width: height, height }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" debounce={1}>
           <PieChart>
             <Pie
               data={data}

@@ -71,7 +71,7 @@ export function AreaTrend({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} debounce={1}>
       <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

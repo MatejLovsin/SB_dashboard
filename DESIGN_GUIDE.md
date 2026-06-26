@@ -107,6 +107,19 @@ rename, Pin/PinOff toggle, invalidate the `…exercisesAll()` key on mutate. Rea
 header.
 **Applies to:** School subjects, Work boards — same row UI, swap the query module.
 
+### Time-gated entry + month-grouped review (weekly journal)
+**What:** a "write once per period" surface whose entry **opens/closes** based on whether a row
+exists for the current target period, paired with a review page that groups records into month
+sections and opens each full-screen.
+**Reuse:** `lib/queries/journal.ts` — `targetWeekStart`/`isEntryOpen`/`nextOpenMonday` (period
+math off `mondayOf`), `weekRangeLabel`, `groupByMonth` (→ `{key,label,weeks}[]` newest-first),
+`upsert(onConflict:'user_id,week_start')`. UI: `FocusOverlay` + `lastFocus` ref for the read view
+(same as `NoteList`), auto-grow `TextArea`, inline pencil→edit/delete, a backfill `<select>` of
+recent uncovered periods. Entry/review reachable **only** from a home-dashboard `Card` widget that
+reads a server `getJournalHomeState` — deliberately **not** in the SideNav.
+**Applies to:** any periodic-log feature (monthly retros, habit check-ins). Swap the period unit
+and the table; the open/closed + month-section pattern carries over.
+
 ---
 
 ### Blue budget (Plan 01)

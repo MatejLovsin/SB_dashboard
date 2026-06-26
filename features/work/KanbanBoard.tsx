@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, ArrowRight } from 'lucide-react';
 import type { RoadmapCard, RoadmapStatus, Priority } from '@/lib/db/types';
 import {
   workKeys,
@@ -25,6 +25,12 @@ const COLUMNS: { status: RoadmapStatus; label: string; color: string }[] = [
   { status: 'in_progress', label: 'In Progress', color: 'bg-[var(--chart-4)]/20 text-[var(--chart-4)]' },
   { status: 'done', label: 'Done', color: 'bg-[var(--up)]/15 text-[var(--up)]' },
 ];
+
+const NEXT_STATUS: Partial<Record<RoadmapStatus, RoadmapStatus>> = {
+  idea: 'planned',
+  planned: 'in_progress',
+  in_progress: 'done',
+};
 
 const PRIORITY_CHIP: Record<Priority, string> = {
   low: 'bg-[var(--border)] text-[var(--muted)]',
@@ -50,6 +56,7 @@ interface KanbanColumnProps {
   onUpdateCard: (id: string, patch: Partial<CardInput>) => void;
   onDeleteCard: (id: string) => void;
   onReorder: (status: RoadmapStatus, orderedIds: string[]) => void;
+  onAdvanceCard: (id: string, nextStatus: RoadmapStatus) => void;
   isCreating: boolean;
 }
 
@@ -62,6 +69,7 @@ function KanbanColumn({
   onUpdateCard,
   onDeleteCard,
   onReorder,
+  onAdvanceCard,
   isCreating,
 }: KanbanColumnProps) {
   const [adding, setAdding] = useState(false);
@@ -166,25 +174,36 @@ function KanbanColumn({
                     )}
                     <div className="mt-2 flex items-center justify-between gap-1">
                       <PriorityChip priority={card.priority} />
-                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => { e.stopPropagation(); setEditingId(card.id); }}
-                          aria-label="Edit"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => { e.stopPropagation(); onDeleteCard(card.id); }}
-                          aria-label="Delete"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                      <div className="flex items-center gap-1">
+                        <div className="flex gap-1 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => { e.stopPropagation(); setEditingId(card.id); }}
+                            aria-label="Edit"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => { e.stopPropagation(); onDeleteCard(card.id); }}
+                            aria-label="Delete"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {NEXT_STATUS[status] && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onAdvanceCard(card.id, NEXT_STATUS[status]!); }}
+                            className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] transition-all hover:bg-[var(--accent)]/20 active:scale-95"
+                            aria-label={`Move to ${COLUMNS.find((c) => c.status === NEXT_STATUS[status])?.label}`}
+                          >
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -335,6 +354,7 @@ export function KanbanBoard() {
             onUpdateCard={(id, patch) => updateMutation.mutate({ id, patch })}
             onDeleteCard={(id) => deleteMutation.mutate(id)}
             onReorder={handleReorder}
+            onAdvanceCard={(id, nextStatus) => updateMutation.mutate({ id, patch: { status: nextStatus } })}
             isCreating={createMutation.isPending}
           />
         );

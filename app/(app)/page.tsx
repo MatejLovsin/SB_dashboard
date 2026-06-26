@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Dumbbell, GraduationCap, Briefcase, ChevronRight } from 'lucide-react';
+import { Dumbbell, GraduationCap, Briefcase, ChevronRight, BookOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getSummary } from '@/lib/queries/ai';
 import { getHomeMetrics } from '@/lib/queries/home';
+import { getJournalHomeState, weekRangeLabel } from '@/lib/queries/journal';
 import { StatTile } from '@/components/ui/StatTile';
 import { CountUp } from '@/components/ui/CountUp';
 import { Sparkline } from '@/components/charts/Sparkline';
@@ -14,11 +15,12 @@ function fmtVol(kg: number): number {
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const [metrics, fitnessSummary, schoolSummary, workSummary] = await Promise.all([
+  const [metrics, fitnessSummary, schoolSummary, workSummary, journalState] = await Promise.all([
     getHomeMetrics(supabase).catch(() => null),
     getSummary(supabase, 'fitness').catch(() => null),
     getSummary(supabase, 'school').catch(() => null),
     getSummary(supabase, 'work').catch(() => null),
+    getJournalHomeState(supabase).catch(() => null),
   ]);
 
   return (
@@ -140,6 +142,55 @@ export default async function HomePage() {
           </Card>
         </Link>
       </div>
+
+      {/* Journal widget — full width below the bento grid */}
+      <Card className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-muted" />
+            <span className="text-sm font-semibold">Weekly journal</span>
+          </div>
+          {journalState?.entryOpen ? (
+            <div className="space-y-2">
+              <Link
+                href="/journal/new"
+                className="block rounded-xl border border-border bg-[var(--surface)] p-3 transition-colors hover:border-accent/30"
+              >
+                <p className="text-sm font-semibold">Write last week&apos;s summary</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {weekRangeLabel(journalState.targetWeekStart)}
+                </p>
+              </Link>
+              <Link
+                href="/journal"
+                className="text-sm text-muted transition-colors hover:text-foreground"
+              >
+                Review journal →
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-muted">
+                {journalState
+                  ? `Caught up — next summary opens ${new Date(
+                      journalState.nextOpenMonday + 'T00:00:00Z',
+                    ).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      timeZone: 'UTC',
+                    })}`
+                  : 'Caught up for now.'}
+              </p>
+              <Link
+                href="/journal"
+                className="text-sm text-muted transition-colors hover:text-foreground"
+              >
+                Review journal →
+              </Link>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

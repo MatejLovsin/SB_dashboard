@@ -101,6 +101,12 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['body_metrics']['Insert']>;
         Relationships: [];
       };
+      journal_weeks: {
+        Row: { id: string; user_id: string; week_start: string; content: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id?: string; week_start: string; content: string; created_at?: string; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['journal_weeks']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -131,3 +137,4 @@ export type Note = Tables<'notes'>;
 export type WorkMetric = Tables<'work_metrics'>;
 export type AiSummary = Tables<'ai_summaries'>;
 export type BodyMetric = Tables<'body_metrics'>;
+export type JournalWeek = Tables<'journal_weeks'>;

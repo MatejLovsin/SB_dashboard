@@ -77,7 +77,7 @@ export function BarCluster({
   };
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} debounce={1}>
       <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -16 }}>
         <CartesianGrid vertical={false} stroke={theme.border} strokeOpacity={0.6} />
         <XAxis

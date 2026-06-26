@@ -45,9 +45,27 @@ No active redesign tasks. Next work: new features or content updates.
   `FocusOverlay`, `TextArea`, `mondayOf`. No AI yet — schema is shaped for a later
   `summarizeJournalRange` route.
 
-**Pending manual actions:** apply migrations `0006_exercise_pins.sql` **and
-`0009_journal_weeks.sql`** to Supabase (`supabase db push` / SQL editor). Until `0009` is applied,
-the journal widget + review degrade gracefully to a "no summaries / caught up" state.
+- [x] **Daily to-do list** — PLANNED the day before, EXECUTED the next day. Two tables
+  (migration `0010`): `todo_pins` (non-negotiable templates) and `todos` (per-day items with
+  `due_date`, `position`, `completed`, `pin_id`). Logic in `lib/queries/todos.ts`: key factory
+  (`todoKeys`), pure UTC helpers (`todayUTC`, `tomorrowUTC`, `addDaysUTC`, `dateLabel`), DB fns
+  (`listTodosByDate`, `listTodosInRange`, `listActivePins`, `materializePinsForDate` — idempotent
+  pin injection, `addTodo`, `updateTodoPositions`, `setTodoCompleted`, `updateTodoTitle`,
+  `deleteTodo`, `pinTodo`, `unpinTodo`), stats helpers (`computeDayStats`, `positionStats`,
+  `weeklyRollup`), and `buildComparisons` — returns STRUCTURED `{ key, label, current, previous,
+  deltaPct, text }[]` for today-vs-yesterday rate, week-vs-week rate, and avg rank of completed
+  (ready for AI formatting later). Rules: past incomplete = failed permanently; no late check-offs;
+  reorder via up/down arrows. Two routes linked only from the home dashboard widget (no SideNav):
+  `/todos/plan` (`TodoPlanner` — materializes pins on load, ordered list with arrow reorder,
+  inline edit, pin toggle, add row) and `/todos` (`TodoReview` — StatTile KPIs, stacked
+  `CompletionBars` chart, `AreaTrend` rate trend, `BarCluster` weekly rollup, comparisons feed).
+  Dashboard widget `TodoDashboard` — card with today's checklist (optimistic toggle) + link cards
+  to plan/review — placed between the morning briefing header and the KPI strip.
+
+**Pending manual actions:** apply migrations `0006_exercise_pins.sql`, `0009_journal_weeks.sql`,
+**and `0010_todos.sql`** to Supabase (`supabase db push` / SQL editor). Until `0010` is applied,
+the todo widget/review degrade gracefully (queries catch errors → empty state). Until `0009` is
+applied, the journal widget + review degrade gracefully to a "no summaries / caught up" state.
 
 ---
 

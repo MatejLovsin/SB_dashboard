@@ -107,6 +107,18 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['journal_weeks']['Insert']>;
         Relationships: [];
       };
+      todo_pins: {
+        Row: { id: string; user_id: string; title: string; position: number; created_at: string };
+        Insert: { id?: string; user_id?: string; title: string; position?: number; created_at?: string };
+        Update: Partial<Database['public']['Tables']['todo_pins']['Insert']>;
+        Relationships: [];
+      };
+      todos: {
+        Row: { id: string; user_id: string; title: string; due_date: string; position: number; completed: boolean; completed_at: string | null; pin_id: string | null; created_at: string };
+        Insert: { id?: string; user_id?: string; title: string; due_date: string; position?: number; completed?: boolean; completed_at?: string | null; pin_id?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['todos']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -138,3 +150,5 @@ export type WorkMetric = Tables<'work_metrics'>;
 export type AiSummary = Tables<'ai_summaries'>;
 export type BodyMetric = Tables<'body_metrics'>;
 export type JournalWeek = Tables<'journal_weeks'>;
+export type TodoPin = Tables<'todo_pins'>;
+export type Todo = Tables<'todos'>;

@@ -8,6 +8,7 @@ import { StatTile } from '@/components/ui/StatTile';
 import { CountUp } from '@/components/ui/CountUp';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { Card } from '@/components/ui/Card';
+import { TodoDashboard } from '@/features/todos/TodoDashboard';
 
 function fmtVol(kg: number): number {
   return kg;
@@ -29,6 +30,9 @@ export default async function HomePage() {
         <h1 className="text-xl font-bold tracking-tight">Morning briefing</h1>
         <p className="mt-0.5 text-sm text-muted">A quick read on each area of your life.</p>
       </div>
+
+      {/* Daily to-do widget — primary daily action */}
+      <TodoDashboard />
 
       {/* KPI strip */}
       <div className="stagger-fade grid grid-cols-1 gap-3 sm:grid-cols-3">

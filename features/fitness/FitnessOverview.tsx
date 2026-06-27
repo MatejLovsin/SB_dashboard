@@ -237,7 +237,9 @@ export async function FitnessOverview() {
                   />
                   <span className="truncate font-medium">{ex.name}</span>
                 </span>
-                <span className="shrink-0 nums text-muted">{ex.lastWeight} kg</span>
+                <span className="shrink-0 nums text-muted">
+                  {ex.lastWeight} kg × {ex.lastReps}
+                </span>
               </li>
             ))}
           </ul>

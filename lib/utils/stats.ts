@@ -156,17 +156,73 @@ export function categorySplit(
     .sort((a, b) => b.value - a.value);
 }
 
-// history must be ordered oldest → newest.
-// Returns true if max weight has not increased across the last `minSessions` sessions.
-export function isStalled(history: Array<{ sets: SetLike[] }>, minSessions = 3): boolean {
-  if (history.length < minSessions) return false;
-  const last = history.slice(-minSessions);
-  const weights = last.map((h) => bestWeight(h.sets));
-  if (weights[0] === 0) return false;
-  return weights[weights.length - 1] <= weights[0];
+// Progressive-overload rule for premade plans. Given a plan set's current target and
+// the set actually performed, returns the new target when it was an improvement, else null.
+// Improvement = estimated 1RM strictly higher than planned, and the target weight is never
+// lowered. On a win the target becomes exactly what was performed (weight AND reps).
+export function progressedTarget(
+  planned: { target_weight: number | null; target_reps: number | null },
+  achieved: { weight: number | null; reps: number | null },
+): { target_weight: number | null; target_reps: number } | null {
+  const ar = achieved.reps;
+  if (ar == null || ar <= 0) return null;
+  const aw = achieved.weight;
+  const pw = planned.target_weight;
+  const pr = planned.target_reps;
+
+  // Weighted set.
+  if (aw != null && aw > 0) {
+    if (pw != null && aw < pw) return null; // never lower the target weight
+    const plannedE1RM = pw != null && pw > 0 && pr != null ? estimatedOneRepMax(pw, pr) : 0;
+    if (estimatedOneRepMax(aw, ar) > plannedE1RM) return { target_weight: aw, target_reps: ar };
+    return null;
+  }
+
+  // Bodyweight set: only progresses a bodyweight plan target, and only on more reps.
+  if (pw != null && pw > 0) return null;
+  if (pr == null || ar > pr) return { target_weight: pw, target_reps: ar };
+  return null;
 }
 
-export type StalledExercise = { exercise_id: string; name: string; lastWeight: number };
+// The set with the highest estimated 1RM in a session — the "top set".
+// Combines weight and reps, so heavier-for-fewer and lighter-for-more compare fairly.
+export function topSet(sets: SetLike[]): { weight: number; reps: number } | null {
+  let best: { weight: number; reps: number } | null = null;
+  let bestE = 0;
+  for (const s of sets) {
+    if (!s.completed || s.reps == null || s.weight == null || s.weight <= 0 || s.reps <= 0) continue;
+    const e = estimatedOneRepMax(s.weight, s.reps);
+    if (e > bestE) {
+      bestE = e;
+      best = { weight: s.weight, reps: s.reps };
+    }
+  }
+  return best;
+}
+
+// history must be ordered oldest → newest.
+// Progress is measured by estimated 1RM of the top set (so rep gains count, and a
+// weight drop only flags you if your combined output actually fell). Trend-based:
+// an exercise is stalled only when the latest session improved on NEITHER the previous
+// session (no momentum) NOR the start of the window (no net gain). This keeps you off
+// the list while climbing back from a deload/injury, even if still below your all-time best.
+export function isStalled(history: Array<{ sets: SetLike[] }>, minSessions = 3): boolean {
+  if (history.length < minSessions) return false;
+  const window = history.slice(-minSessions);
+  const e1rms = window.map((h) => bestSetE1RM(h.sets));
+  const latest = e1rms[e1rms.length - 1];
+  const previous = e1rms[e1rms.length - 2];
+  const oldest = e1rms[0];
+  if (latest === 0 || previous === 0 || oldest === 0) return false; // not enough data
+  return latest <= previous && latest <= oldest;
+}
+
+export type StalledExercise = {
+  exercise_id: string;
+  name: string;
+  lastWeight: number;
+  lastReps: number;
+};
 
 export function findStalledExercises(
   exerciseSessions: Map<string, Array<{ performed_at: string; sets: SetLike[] }>>,
@@ -179,10 +235,12 @@ export function findStalledExercises(
     );
     if (isStalled(sorted)) {
       const last = sorted[sorted.length - 1];
+      const top = topSet(last.sets);
       result.push({
         exercise_id: exerciseId,
         name: exerciseNames.get(exerciseId) ?? 'Unknown',
-        lastWeight: bestWeight(last.sets),
+        lastWeight: top?.weight ?? 0,
+        lastReps: top?.reps ?? 0,
       });
     }
   }

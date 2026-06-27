@@ -6,6 +6,7 @@ import {
   type PlanWithExercises,
   type PlanListItem,
 } from './fitness';
+import { estimatedOneRepMax, progressedTarget } from '@/lib/utils/stats';
 
 type Client = SupabaseClient<Database>;
 
@@ -188,4 +189,98 @@ export async function updatePlanSet(
 export async function deletePlanSet(client: Client, setId: string): Promise<void> {
   const { error } = await client.from('plan_sets').delete().eq('id', setId);
   if (error) throw error;
+}
+
+export type PlanAutoUpdate = {
+  exerciseName: string;
+  from: { weight: number | null; reps: number | null };
+  to: { weight: number | null; reps: number };
+};
+
+// Called when a workout is finished. Ratchets the source plan's per-set targets up to
+// match any set the user overperformed (see `progressedTarget`). Only sets seeded from
+// the plan (plan_set_id set) are considered; ad-hoc sets never touch the plan. Returns a
+// summary of what changed — empty if the session wasn't from a plan or nothing improved.
+export async function applyPlanProgress(
+  client: Client,
+  sessionId: string,
+): Promise<PlanAutoUpdate[]> {
+  const { data: session, error: sessionError } = await client
+    .from('workout_sessions')
+    .select('id, plan_id')
+    .eq('id', sessionId)
+    .single();
+  if (sessionError) throw sessionError;
+  if (!session.plan_id) return [];
+
+  const { data: sets, error: setsError } = await client
+    .from('session_sets')
+    .select('exercise_id, plan_set_id, reps, weight')
+    .eq('session_id', sessionId)
+    .eq('completed', true)
+    .not('plan_set_id', 'is', null);
+  if (setsError) throw setsError;
+  const performed = sets ?? [];
+  if (performed.length === 0) return [];
+
+  // Best performed set per plan set (normally 1:1, but stay safe if it isn't).
+  type Best = { exercise_id: string; weight: number | null; reps: number | null; e: number };
+  const bestByPlanSet = new Map<string, Best>();
+  for (const s of performed) {
+    const id = s.plan_set_id as string;
+    const e =
+      s.weight != null && s.weight > 0 && s.reps != null
+        ? estimatedOneRepMax(s.weight, s.reps)
+        : (s.reps ?? 0);
+    const prev = bestByPlanSet.get(id);
+    if (!prev || e > prev.e) bestByPlanSet.set(id, { exercise_id: s.exercise_id, weight: s.weight, reps: s.reps, e });
+  }
+
+  const { data: planSets, error: planSetsError } = await client
+    .from('plan_sets')
+    .select('*')
+    .in('id', [...bestByPlanSet.keys()]);
+  if (planSetsError) throw planSetsError;
+  const planSetById = new Map((planSets ?? []).map((ps) => [ps.id, ps]));
+
+  const exById = await fetchExercisesById(
+    client,
+    [...new Set([...bestByPlanSet.values()].map((b) => b.exercise_id))],
+  );
+
+  const updates: PlanAutoUpdate[] = [];
+  const writes: PromiseLike<unknown>[] = [];
+  for (const [planSetId, achieved] of bestByPlanSet) {
+    const planSet = planSetById.get(planSetId);
+    if (!planSet) continue;
+    const next = progressedTarget(
+      { target_weight: planSet.target_weight, target_reps: planSet.target_reps },
+      { weight: achieved.weight, reps: achieved.reps },
+    );
+    if (!next) continue;
+    updates.push({
+      exerciseName: exById.get(achieved.exercise_id)?.name ?? 'Exercise',
+      from: { weight: planSet.target_weight, reps: planSet.target_reps },
+      to: { weight: next.target_weight, reps: next.target_reps },
+    });
+    writes.push(
+      client.from('plan_sets').update(next).eq('id', planSetId).then(({ error }) => {
+        if (error) throw error;
+      }),
+    );
+  }
+
+  if (updates.length > 0) {
+    writes.push(
+      client
+        .from('workout_plans')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', session.plan_id)
+        .then(({ error }) => {
+          if (error) throw error;
+        }),
+    );
+  }
+  await Promise.all(writes);
+  return updates;
 }

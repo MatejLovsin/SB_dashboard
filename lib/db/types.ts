@@ -42,8 +42,8 @@ export interface Database {
         Relationships: [];
       };
       session_sets: {
-        Row: { id: string; user_id: string; session_id: string; exercise_id: string; set_number: number; position: number; reps: number | null; weight: number | null; completed: boolean } & Timestamps;
-        Insert: { id?: string; user_id?: string; session_id: string; exercise_id: string; set_number: number; position?: number; reps?: number | null; weight?: number | null; completed?: boolean; created_at?: string };
+        Row: { id: string; user_id: string; session_id: string; exercise_id: string; plan_set_id: string | null; set_number: number; position: number; reps: number | null; weight: number | null; completed: boolean } & Timestamps;
+        Insert: { id?: string; user_id?: string; session_id: string; exercise_id: string; plan_set_id?: string | null; set_number: number; position?: number; reps?: number | null; weight?: number | null; completed?: boolean; created_at?: string };
         Update: Partial<Database['public']['Tables']['session_sets']['Insert']>;
         Relationships: [];
       };

@@ -101,7 +101,7 @@ export async function FitnessOverviewPreview() {
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                   <span className="truncate">{ex.name}</span>
                 </span>
-                <span className="shrink-0 text-muted">{ex.lastWeight} kg</span>
+                <span className="shrink-0 text-muted">{ex.lastWeight} kg × {ex.lastReps}</span>
               </li>
             ))}
           </ul>

@@ -14,6 +14,7 @@ import {
   updateSessionSet,
   type SessionSetPatch,
 } from '@/lib/queries/sessions';
+import { applyPlanProgress, type PlanAutoUpdate } from '@/lib/queries/plans';
 import type { Exercise, SessionSet } from '@/lib/db/types';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +42,38 @@ function countSets(data: SessionWithSets): { done: number; total: number } {
 interface ActiveSessionProps {
   sessionId: string;
   onFinish: () => void;
+}
+
+function fmtTarget(v: { weight: number | null; reps: number | null }): string {
+  const reps = v.reps ?? '—';
+  return v.weight != null && v.weight > 0 ? `${v.weight} kg × ${reps}` : `${reps} reps`;
+}
+
+function PlanUpdateSummary({ updates, onDone }: { updates: PlanAutoUpdate[]; onDone: () => void }) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Workout saved</h1>
+        <p className="mt-1 text-sm text-muted">
+          {updates.length} plan {updates.length === 1 ? 'target' : 'targets'} updated — you beat your plan.
+        </p>
+      </div>
+      <Card>
+        <CardTitle className="mb-3">Plan progress</CardTitle>
+        <ul className="space-y-2.5">
+          {updates.map((u, i) => (
+            <li key={i} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate font-medium">{u.exerciseName}</span>
+              <span className="shrink-0 nums text-muted">
+                {fmtTarget(u.from)} → <span className="font-semibold text-foreground">{fmtTarget(u.to)}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+      <Button className="w-full" onClick={onDone}>Done</Button>
+    </div>
+  );
 }
 
 export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
@@ -132,10 +165,18 @@ export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
   });
 
   const finishMutation = useMutation({
-    mutationFn: (notes: string | null) => updateSession(supabase, sessionId, { notes }),
-    onSuccess: () => {
+    mutationFn: async (notes: string | null) => {
+      await updateSession(supabase, sessionId, { notes });
+      return applyPlanProgress(supabase, sessionId);
+    },
+    onSuccess: (updates) => {
       queryClient.invalidateQueries({ queryKey: fitnessKeys.sessions() });
-      onFinish();
+      if (updates.length > 0) {
+        queryClient.invalidateQueries({ queryKey: fitnessKeys.plans() });
+        setPlanUpdates(updates);
+      } else {
+        onFinish();
+      }
     },
   });
 
@@ -148,6 +189,9 @@ export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
   });
 
   const [notes, setNotes] = useState('');
+  const [planUpdates, setPlanUpdates] = useState<PlanAutoUpdate[] | null>(null);
+
+  if (planUpdates) return <PlanUpdateSummary updates={planUpdates} onDone={onFinish} />;
 
   if (isPending) return <div className="flex items-center gap-2 text-sm text-muted"><Spinner /> Loading session…</div>;
   if (isError) return <p className="text-sm text-red-600 dark:text-red-400">{(error as Error).message}</p>;

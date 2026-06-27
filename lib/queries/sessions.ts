@@ -87,6 +87,7 @@ export async function startSessionFromPlan(
       rows.push({
         session_id: session.id,
         exercise_id: line.exercise_id,
+        plan_set_id: set?.id ?? null,
         set_number: index + 1,
         position: position++,
         reps: set?.target_reps ?? null,

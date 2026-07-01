@@ -12,6 +12,11 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 - R1–R6: dark analytics aesthetic (foundation, fitness, home, school, work, polish)
 - Plan 01: slim persistent sidebar (`w-52 h-dvh`), wider content (`max-w-6xl`), blue diet (neutral hovers)
 - Plan 02: density + motion system — bento instrument panels, CountUp KPIs, ChartReveal hero charts, chartAnim bars/areas, press-flash feedback, accent bar in SideNav
+- Plan 03: per-section color themes (Home=indigo, Fitness=red, School=teal, Work=graphite)
+  via `[data-theme]` blocks in `globals.css` + `AppShell` wiring off the route; shared
+  neutral chrome repainted from navy-tinted to true neutral so it stops clashing with
+  section accents; one ambient `.section-glow` wash pinned to the top of the viewport
+  (auto-colored per theme) — a second per-element hero glow was tried and removed.
 
 **Design rules live in `DESIGN_GUIDE.md`.**
 

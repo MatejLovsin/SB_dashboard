@@ -8,37 +8,75 @@
 @custom-variant dark (&);
 
 /*
- * Dark-only "analytics" theme — deep navy base, one blue in many shades.
+ * Dark-only "analytics" theme — true neutral (near-black/grey) base shared by
+ * every section, so no section's accent color has to fight a tinted chrome.
  * Every component & chart references these tokens; never hard-code hex.
  */
 :root {
   color-scheme: dark;
-  --background: #080b14;   /* deep navy-black, page */
+  --background: #09090b;   /* near-black, page */
   /* Motion tokens */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 150ms;
   --dur-mid: 480ms;
   --dur-slow: 900ms;
-  --surface: #0d1322;      /* raised panel / sidebar */
-  --card: #111a2e;         /* card fill */
-  --card-2: #16213a;       /* nested / hover fill */
-  --border: #1e2a44;       /* hairline borders */
-  --foreground: #e8edf7;   /* primary text */
-  --muted: #7d8aa6;        /* secondary text / axes */
-  --accent: #3b82f6;       /* primary blue — highlight / important value / CTA / chart only; chrome and resting surfaces stay neutral navy */
-  --accent-soft: rgba(59, 130, 246, 0.12); /* tints, hovers, tooltip cursors */
+  --surface: #111113;      /* raised panel / sidebar */
+  --card: #18181b;         /* card fill */
+  --card-2: #212125;       /* nested / hover fill */
+  --border: #2a2a2e;       /* hairline borders */
+  --foreground: #f2f2f3;   /* primary text */
+  --muted: #8b8b93;        /* secondary text / axes */
+  /* Home / default theme — indigo. Section themes below override accent + chart
+   * ramps only; shared neutral surfaces (background/card/border/muted) never change. */
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.12);
 
-  /* blue scale for charts (light → dark) — "many shades of one color" */
-  --chart-1: #bfdbfe;
-  --chart-2: #7eb0fb;
-  --chart-3: #60a5fa;
-  --chart-4: #3b82f6;
-  --chart-5: #2563eb;
-  --chart-6: #1d4ed8;
+  --chart-1: #c7d2fe;
+  --chart-2: #a5b4fc;
+  --chart-3: #818cf8;
+  --chart-4: #6366f1;
+  --chart-5: #4f46e5;
+  --chart-6: #4338ca;
 
-  /* semantic deltas — used sparingly, only for +/- badges */
+  /* semantic deltas — used sparingly, only for +/- badges; constant across themes */
   --up: #4ade80;
   --down: #f87171;
+}
+
+/* Fitness — red. */
+[data-theme='fitness'] {
+  --accent: #ef4444;
+  --accent-soft: rgba(239, 68, 68, 0.12);
+  --chart-1: #fecaca;
+  --chart-2: #fca5a5;
+  --chart-3: #f87171;
+  --chart-4: #ef4444;
+  --chart-5: #dc2626;
+  --chart-6: #b91c1c;
+}
+
+/* School — teal. */
+[data-theme='school'] {
+  --accent: #14b8a6;
+  --accent-soft: rgba(20, 184, 166, 0.12);
+  --chart-1: #99f6e4;
+  --chart-2: #5eead4;
+  --chart-3: #2dd4bf;
+  --chart-4: #14b8a6;
+  --chart-5: #0d9488;
+  --chart-6: #0f766e;
+}
+
+/* Work — graphite / slate. */
+[data-theme='work'] {
+  --accent: #94a3b8;
+  --accent-soft: rgba(148, 163, 184, 0.12);
+  --chart-1: #e2e8f0;
+  --chart-2: #cbd5e1;
+  --chart-3: #94a3b8;
+  --chart-4: #64748b;
+  --chart-5: #475569;
+  --chart-6: #334155;
 }
 
 @theme inline {
@@ -84,6 +122,26 @@ body {
     0 1px 0 0 rgba(255, 255, 255, 0.03) inset,
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 8px 24px -12px rgba(0, 0, 0, 0.5);
+}
+
+/*
+ * Ambient section glow — one big soft wash pinned to the top of the viewport,
+ * colored by the active section's --accent (set via [data-theme] upstream).
+ * Fixed + negative z-index so it sits behind all in-flow chrome/content.
+ */
+.section-glow {
+  position: fixed;
+  top: -12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1100px, 140%);
+  height: 420px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, var(--accent) 0%, transparent 70%);
+  opacity: 0.16;
+  filter: blur(60px);
+  transition: background-color 0.3s ease;
 }
 
 /* Respect device safe areas (notch / home indicator) for the home-screen app. */

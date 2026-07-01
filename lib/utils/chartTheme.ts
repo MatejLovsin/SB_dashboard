@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 /**
  * Single source of truth for chart colors. Reads the design tokens defined in
- * `app/globals.css` so every Recharts/custom chart draws from the same navy+blue
- * palette — "many shades of one color". Generalizes the per-file `readVar()`
- * helper the charts used to duplicate.
+ * `app/globals.css` so every Recharts/custom chart draws from the current
+ * section's palette — "many shades of one color" per section (see
+ * DESIGN_GUIDE.md "Per-section color themes"). Generalizes the per-file
+ * `readVar()` helper the charts used to duplicate.
  */
 
 export interface ChartTheme {
-  /** Primary blue — key series, lines, single-series bars. */
+  /** Primary accent (current section's color) — key series, lines, single-series bars. */
   accent: string;
   /** Secondary text / axis ticks / gridlines. */
   muted: string;
@@ -23,30 +25,38 @@ export interface ChartTheme {
   /** Positive / negative delta colors. */
   up: string;
   down: string;
-  /** Blue scale light→dark, for categorical / graded series. */
+  /** Section's scale light→dark, for categorical / graded series. */
   scale: [string, string, string, string, string, string];
 }
 
+// Matches :root's default (home/indigo) theme in app/globals.css — used only
+// for SSR / before the [data-theme] element is queryable.
 const FALLBACK: ChartTheme = {
-  accent: '#3b82f6',
-  muted: '#7d8aa6',
-  border: '#1e2a44',
-  surface: '#0d1322',
-  foreground: '#e8edf7',
+  accent: '#6366f1',
+  muted: '#8b8b93',
+  border: '#2a2a2e',
+  surface: '#111113',
+  foreground: '#f2f2f3',
   up: '#4ade80',
   down: '#f87171',
-  scale: ['#bfdbfe', '#7eb0fb', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'],
+  scale: ['#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca'],
 };
+
+// The [data-theme] attribute (set by AppShell) lives on a div *inside* body,
+// not an ancestor of <html> — so getComputedStyle(document.documentElement)
+// never sees section overrides. Read from that element instead.
+function themeRoot(): Element {
+  return document.querySelector('[data-theme]') ?? document.documentElement;
+}
 
 function readVar(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback;
   return (
-    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
-    fallback
+    getComputedStyle(themeRoot()).getPropertyValue(name).trim() || fallback
   );
 }
 
-/** Read the current chart theme from CSS variables (computed once on mount). */
+/** Read the current chart theme from CSS variables. */
 export function readChartTheme(): ChartTheme {
   if (typeof window === 'undefined') return FALLBACK;
   return {
@@ -69,11 +79,17 @@ export function readChartTheme(): ChartTheme {
 }
 
 /**
- * Hook form: resolves the theme once on first client render and keeps it stable.
- * (The theme is static dark-only, so there's no need to re-read on changes.)
+ * Hook form: resolves the theme from CSS vars and re-reads whenever the route
+ * changes (the active section, and therefore --accent/--chart-*, changes per
+ * route). Uses useLayoutEffect so the re-read happens after the [data-theme]
+ * attribute has actually committed to the DOM, avoiding a stale first paint.
  */
 export function useChartTheme(): ChartTheme {
-  const [theme] = useState(readChartTheme);
+  const pathname = usePathname();
+  const [theme, setTheme] = useState(readChartTheme);
+  useLayoutEffect(() => {
+    setTheme(readChartTheme());
+  }, [pathname]);
   return theme;
 }
 

@@ -161,3 +161,41 @@ Motion tokens live in `app/globals.css` (`--ease-out-quint`, `--dur-fast/mid/slo
 - **`.press-flash`** (globals.css): add alongside `panel-hover` on all tappable surfaces for a tactile ring on press.
 - **`Button`**: `press-flash active:scale-[0.97]` always applied.
 - **SideNav**: animated `w-0.5 h-5 bg-accent` accent bar slides in on active item.
+
+---
+
+### Per-section color themes + glow (Plan 03)
+
+Each section owns a distinct multi-shade color ramp instead of one blue across the whole
+app. The shared neutral chrome (`--background/--surface/--card/--card-2/--border/
+--foreground/--muted`) was **repainted to true neutral (near-black/grey, no hue)** as
+part of this plan — it used to be navy-tinted from the original blue-only theme, which
+visibly clashed with the new section accents (e.g. a blue-ish border next to a red
+accent). The semantic `--up`/`--down` delta colors stay global and unchanged.
+
+- **Themes** (`app/globals.css`, `[data-theme='…']` blocks override `--accent`,
+  `--accent-soft`, `--chart-1..6`): `home` (indigo, default/root) · `fitness` (red) ·
+  `school` (teal) · `work` (graphite/slate).
+- **Wiring**: `AppShell.tsx` (client component) derives the active section from
+  `usePathname()` via `sectionTheme()` (`components/layout/nav-items.ts`) and sets
+  `data-theme` on its root wrapper. Because it's the single ancestor of `SideNav`,
+  `TopBar`, `BottomNav`, and page content, one attribute recolors the whole frame —
+  nav active-states included. `/journal` and `/todos` (dashboard-only, no SideNav entry)
+  theme as `home`. Add a new section by adding a `[data-theme='x']` block + a branch in
+  `sectionTheme()`; every component automatically re-colors since none hardcode hex/blue.
+- **Glow**: exactly one effect — `.section-glow` (`app/globals.css`), a single fixed,
+  viewport-anchored radial gradient pinned to the top of the screen, colored via
+  `var(--accent)` so it re-colors with the theme automatically. Rendered once in
+  `AppShell`, `z-index: -1` so it sits behind all chrome/content. We tried a second,
+  smaller "hero panel" glow and cut it — it read as visual noise, not polish. Don't
+  reintroduce per-element glows.
+- **Charts must read the theme via `useChartTheme()`/`readChartTheme()`
+  (`lib/utils/chartTheme.ts`), never `getComputedStyle(document.documentElement)`
+  directly.** Recharts/SVG charts can't just use `bg-accent`-style Tailwind classes —
+  they need real color strings, read from CSS vars via JS. `document.documentElement`
+  is `<html>`, which is an *ancestor* of the `[data-theme]` div AppShell renders, so it
+  never sees section overrides — reading from it always returns the default (home)
+  theme regardless of section. `readVar()` instead queries the actual `[data-theme]`
+  element (`document.querySelector('[data-theme]')`). `useChartTheme()` also re-reads
+  on every route change (`useLayoutEffect` keyed on `usePathname()`) since the palette
+  now varies per route instead of being permanently static.

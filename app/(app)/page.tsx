@@ -34,32 +34,34 @@ export default async function HomePage() {
       {/* Daily to-do widget — primary daily action */}
       <TodoDashboard />
 
-      {/* KPI strip */}
+      {/* KPI strip — the long view: last 90 days, a wider lens than the link
+          cards below (which stay on 30d / this-week / current snapshot). */}
       <div className="stagger-fade grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile
-          label="Fitness volume · 30d"
-          value={<CountUp value={fmtVol(metrics?.fitness.volume30d ?? 0)} format="compact" />}
+          label="Fitness volume · 90d"
+          value={<CountUp value={fmtVol(metrics?.longTerm.fitnessVolume90d ?? 0)} format="compact" />}
           unit="kg"
-          delta={metrics?.fitness.volumeDelta ?? undefined}
+          delta={metrics?.longTerm.fitnessVolumeDelta ?? undefined}
         >
-          <Sparkline data={metrics?.fitness.weeklyVolumeSparkline ?? []} />
+          <Sparkline data={metrics?.longTerm.fitnessVolumeSparkline ?? []} />
         </StatTile>
 
         <StatTile
-          label="Study · this week"
-          value={<CountUp value={metrics?.school.hoursThisWeek ?? 0} decimals={1} />}
+          label="Study hours · 90d"
+          value={<CountUp value={metrics?.longTerm.schoolHours90d ?? 0} decimals={1} />}
           unit="h"
-          delta={metrics?.school.hoursDelta ?? undefined}
+          delta={metrics?.longTerm.schoolHoursDelta ?? undefined}
         >
-          <Sparkline data={metrics?.school.weeklyHoursSparkline ?? []} />
+          <Sparkline data={metrics?.longTerm.schoolHoursSparkline ?? []} />
         </StatTile>
 
         <StatTile
-          label="Work · in progress"
-          value={<CountUp value={metrics?.work.inProgressCount ?? 0} />}
+          label="Work shipped · 90d"
+          value={<CountUp value={metrics?.longTerm.workShipped90d ?? 0} />}
           unit="cards"
+          delta={metrics?.longTerm.workShippedDelta ?? undefined}
         >
-          <Sparkline data={metrics?.work.notesPerWeekSparkline ?? []} />
+          <Sparkline data={metrics?.longTerm.workShippedSparkline ?? []} />
         </StatTile>
       </div>
 

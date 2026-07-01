@@ -21,7 +21,6 @@ export function ExamForm({ subjects, initial, onSubmit, onCancel, isPending }: P
   const [targetHours, setTargetHours] = useState(
     initial?.target_study_hours != null ? String(initial.target_study_hours) : '',
   );
-
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!subjectId || !examDate) return;

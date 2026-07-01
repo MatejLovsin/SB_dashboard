@@ -2,12 +2,7 @@ import type { ExamWithSubject } from '@/lib/queries/school';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pencil, Trash2 } from 'lucide-react';
-
-function daysUntil(dateStr: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((new Date(dateStr).getTime() - today.getTime()) / 86_400_000);
-}
+import { daysUntil } from '@/lib/utils/dates';
 
 interface Props {
   exam: ExamWithSubject;

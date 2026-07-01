@@ -1,12 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { listUpcomingExamsWithProgress } from '@/lib/queries/school';
 import { Card, CardTitle } from '@/components/ui/Card';
-
-function daysUntil(dateStr: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((new Date(dateStr).getTime() - today.getTime()) / 86_400_000);
-}
+import { daysUntil } from '@/lib/utils/dates';
 
 export async function UpcomingExams() {
   const supabase = await createClient();

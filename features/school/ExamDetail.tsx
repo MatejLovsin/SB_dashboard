@@ -1,27 +1,43 @@
+import { useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import type { ExamWithSubject } from '@/lib/queries/school';
+import { daysUntil } from '@/lib/utils/dates';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 /**
- * Read-only expanded view of a single exam — full metadata and progress.
+ * Expanded view of a single exam — full metadata and progress.
  * Rendered inside a {@link FocusOverlay}; visually distinct from the compact ExamCard
  * (larger type, generous spacing, eyebrow date chip, full progress bar).
+ * Once the exam has passed, also hosts the only place a grade can be entered.
  */
-
-function daysUntil(dateStr: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((new Date(dateStr).getTime() - today.getTime()) / 86_400_000);
-}
 
 export function ExamDetail({
   exam,
   studySeconds,
+  onSaveGrade,
+  isSavingGrade,
 }: {
   exam: ExamWithSubject;
   studySeconds: number;
+  onSaveGrade?: (grade: number | null) => void;
+  isSavingGrade?: boolean;
 }) {
   const days = daysUntil(exam.exam_date);
   const isUpcoming = days >= 0;
+  const [editingGrade, setEditingGrade] = useState(false);
+  const [gradeInput, setGradeInput] = useState('');
+
+  function startEditingGrade() {
+    setGradeInput(exam.grade != null ? String(exam.grade) : '');
+    setEditingGrade(true);
+  }
+
+  function submitGrade(e: React.FormEvent) {
+    e.preventDefault();
+    onSaveGrade?.(gradeInput ? Number(gradeInput) : null);
+    setEditingGrade(false);
+  }
 
   const progress = exam.target_study_hours
     ? Math.min(100, (studySeconds / (exam.target_study_hours * 3600)) * 100)
@@ -61,10 +77,39 @@ export function ExamDetail({
           <span className={days <= 7 ? 'font-medium text-amber-500' : 'text-foreground/80'}>
             {days === 0 ? 'Exam is today!' : `${days} day${days === 1 ? '' : 's'} until exam`}
           </span>
-        ) : exam.grade != null ? (
-          <span className="font-medium text-foreground/80">Grade: {exam.grade}%</span>
+        ) : editingGrade ? (
+          <form onSubmit={submitGrade} className="flex items-end gap-2">
+            <Input
+              label="Grade (%)"
+              id="exam-grade-input"
+              type="number"
+              min="0"
+              autoFocus
+              value={gradeInput}
+              onChange={(e) => setGradeInput(e.target.value)}
+              placeholder="e.g. 85"
+              className="max-w-[8rem]"
+            />
+            <Button type="submit" size="sm" disabled={isSavingGrade}>
+              {isSavingGrade ? 'Saving…' : 'Save'}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setEditingGrade(false)}>
+              Cancel
+            </Button>
+          </form>
         ) : (
-          <span className="italic text-muted">No grade recorded</span>
+          <div className="flex items-center gap-2">
+            {exam.grade != null ? (
+              <span className="font-medium text-foreground/80">Grade: {exam.grade}%</span>
+            ) : (
+              <span className="italic text-muted">No grade recorded</span>
+            )}
+            {onSaveGrade && (
+              <Button variant="ghost" size="sm" onClick={startEditingGrade}>
+                {exam.grade != null ? 'Edit grade' : 'Add grade'}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

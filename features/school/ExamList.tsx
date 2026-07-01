@@ -27,7 +27,7 @@ export function ExamList() {
   // Retain the last focused exam so its content stays put during the exit animation.
   const lastFocusExam = useRef<ExamWithSubject | null>(null);
   if (focusExam) lastFocusExam.current = focusExam;
-  const displayExam = focusExam ?? lastFocusExam.current;
+  const focusExamSnapshot = focusExam ?? lastFocusExam.current;
 
   const { data: subjects = [] } = useQuery({
     queryKey: schoolKeys.subjects(),
@@ -43,6 +43,11 @@ export function ExamList() {
     queryFn: () => getStudySecondsForExams(supabase, examIds),
     enabled: examIds.length > 0,
   });
+  // Prefer the live list entry so edits (e.g. a newly-saved grade) show immediately,
+  // falling back to the frozen snapshot only if it's no longer in the list (e.g. deleted).
+  const displayExam = focusExamSnapshot
+    ? (exams.find((e) => e.id === focusExamSnapshot.id) ?? focusExamSnapshot)
+    : null;
 
   const refresh = () => qc.invalidateQueries({ queryKey: schoolKeys.exams() });
 
@@ -57,6 +62,11 @@ export function ExamList() {
   });
   const delMut = useMutation({
     mutationFn: (id: string) => deleteExam(supabase, id),
+    onSuccess: refresh,
+  });
+  const gradeMut = useMutation({
+    mutationFn: ({ id, grade }: { id: string; grade: number | null }) =>
+      updateExam(supabase, id, { grade }),
     onSuccess: refresh,
   });
 
@@ -162,6 +172,8 @@ export function ExamList() {
           <ExamDetail
             exam={displayExam}
             studySeconds={studyMap?.get(displayExam.id) ?? 0}
+            onSaveGrade={(grade) => gradeMut.mutate({ id: displayExam.id, grade })}
+            isSavingGrade={gradeMut.isPending && gradeMut.variables?.id === displayExam.id}
           />
         )}
       </FocusOverlay>

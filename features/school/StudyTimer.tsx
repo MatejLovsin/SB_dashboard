@@ -44,8 +44,8 @@ export function StudyTimer() {
     queryFn: () => listSubjects(supabase),
   });
   const { data: allExams = [] } = useQuery({
-    queryKey: schoolKeys.exams(),
-    queryFn: () => listExams(supabase),
+    queryKey: schoolKeys.exams({ upcoming: true }),
+    queryFn: () => listExams(supabase, { upcoming: true }),
   });
 
   const [phase, setPhase] = useState<Phase>('idle');

@@ -1,11 +1,24 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import { CalendarDays, Check, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getSessionWithSets } from '@/lib/queries/sessions';
-import { type SessionWithSets } from '@/lib/queries/fitness';
+import { fitnessKeys, type SessionWithSets } from '@/lib/queries/fitness';
+import { getExerciseHistory } from '@/lib/queries/analytics';
+import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
+
+const StrengthTrendChart = dynamic(
+  () => import('./charts/StrengthTrendChart').then((m) => m.StrengthTrendChart),
+  { ssr: false, loading: () => <div className="flex h-44 items-center justify-center"><Spinner /></div> },
+);
+const VolumeBarChart = dynamic(
+  () => import('./charts/VolumeBarChart').then((m) => m.VolumeBarChart),
+  { ssr: false, loading: () => <div className="flex h-44 items-center justify-center"><Spinner /></div> },
+);
 
 /**
  * Read-only expanded view of a single fitness session — exercises, sets, and metadata.
@@ -72,8 +85,47 @@ function PlanUpdatedBanner({ data }: { data: SessionWithSets }) {
   );
 }
 
+function ExerciseTrendCard({
+  exerciseId,
+  exerciseName,
+  sessionId,
+}: {
+  exerciseId: string;
+  exerciseName: string;
+  sessionId: string;
+}) {
+  const supabase = createClient();
+
+  const { data: history, isLoading } = useQuery({
+    queryKey: fitnessKeys.exerciseHistory(exerciseId),
+    queryFn: () => getExerciseHistory(supabase, exerciseId),
+    staleTime: 60_000,
+  });
+
+  return (
+    <Card>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">
+        {exerciseName}
+      </h3>
+      {isLoading ? (
+        <div className="flex h-44 items-center justify-center">
+          <Spinner />
+        </div>
+      ) : !history || history.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">No logged sets yet.</p>
+      ) : (
+        <div className="space-y-4">
+          <StrengthTrendChart data={history} highlightSessionId={sessionId} />
+          <VolumeBarChart data={history} highlightSessionId={sessionId} />
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function SessionDetailBody({ data }: { data: SessionWithSets }) {
   const { session, groups } = data;
+  const [view, setView] = useState<'list' | 'trends'>('list');
 
   // Summary stats — prefer completed sets, but fall back to all logged sets so a
   // session that was logged without ticking "completed" still shows real numbers.
@@ -109,54 +161,88 @@ export function SessionDetailBody({ data }: { data: SessionWithSets }) {
         {date}
       </div>
 
+      {/* List / Trends toggle */}
+      <div className="flex gap-2">
+        {(['list', 'trends'] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium press-flash transition-colors ${
+              view === v
+                ? 'bg-accent text-white'
+                : 'border border-border bg-card text-muted hover:text-foreground'
+            }`}
+          >
+            {v === 'list' ? 'List' : 'Trends'}
+          </button>
+        ))}
+      </div>
+
       {/* Plan auto-progression banner */}
       <PlanUpdatedBanner data={data} />
 
-      {/* Session notes */}
-      {session.notes && (
-        <p className="whitespace-pre-line text-[15px] leading-relaxed text-foreground/85">
-          {session.notes}
-        </p>
-      )}
+      {view === 'list' ? (
+        <>
+          {/* Session notes */}
+          {session.notes && (
+            <p className="whitespace-pre-line text-[15px] leading-relaxed text-foreground/85">
+              {session.notes}
+            </p>
+          )}
 
-      {/* Exercise groups */}
-      {groups.length > 0 ? (
-        <div className="space-y-5 pt-1">
+          {/* Exercise groups */}
+          {groups.length > 0 ? (
+            <div className="space-y-5 pt-1">
+              {groups.map((group) => (
+                <section key={group.exercise_id} className="space-y-2">
+                  {/* Exercise name heading */}
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
+                    {group.exercise?.name ?? 'Unknown exercise'}
+                  </h3>
+
+                  {/* Sets */}
+                  <ul className="space-y-1">
+                    {group.sets.map((set) => {
+                      const repsStr = set.reps != null ? String(set.reps) : '—';
+                      const weightStr = set.weight != null ? `${set.weight} kg` : '—';
+                      return (
+                        <li
+                          key={set.id}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <span className="w-6 text-right text-xs text-muted">{set.set_number}</span>
+                          <span
+                            className={
+                              set.completed
+                                ? 'text-foreground/90'
+                                : 'text-foreground/50 line-through'
+                            }
+                          >
+                            {repsStr} × {weightStr}
+                          </span>
+                          {set.completed && (
+                            <Check className="h-3.5 w-3.5 text-accent" aria-label="completed" />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm italic text-muted">No exercises logged.</p>
+          )}
+        </>
+      ) : groups.length > 0 ? (
+        <div className="space-y-4 pt-1">
           {groups.map((group) => (
-            <section key={group.exercise_id} className="space-y-2">
-              {/* Exercise name heading */}
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
-                {group.exercise?.name ?? 'Unknown exercise'}
-              </h3>
-
-              {/* Sets */}
-              <ul className="space-y-1">
-                {group.sets.map((set) => {
-                  const repsStr = set.reps != null ? String(set.reps) : '—';
-                  const weightStr = set.weight != null ? `${set.weight} kg` : '—';
-                  return (
-                    <li
-                      key={set.id}
-                      className="flex items-center gap-3 text-sm"
-                    >
-                      <span className="w-6 text-right text-xs text-muted">{set.set_number}</span>
-                      <span
-                        className={
-                          set.completed
-                            ? 'text-foreground/90'
-                            : 'text-foreground/50 line-through'
-                        }
-                      >
-                        {repsStr} × {weightStr}
-                      </span>
-                      {set.completed && (
-                        <Check className="h-3.5 w-3.5 text-accent" aria-label="completed" />
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+            <ExerciseTrendCard
+              key={group.exercise_id}
+              exerciseId={group.exercise_id}
+              exerciseName={group.exercise?.name ?? 'Unknown exercise'}
+              sessionId={session.id}
+            />
           ))}
         </div>
       ) : (

@@ -3,6 +3,7 @@
 import {
   BarChart,
   Bar,
+  Rectangle,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,6 +16,7 @@ import type { ExerciseSessionPoint } from '@/lib/queries/analytics';
 
 interface Props {
   data: ExerciseSessionPoint[];
+  highlightSessionId?: string;
 }
 
 function shortDate(iso: string): string {
@@ -22,12 +24,13 @@ function shortDate(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function VolumeBarChart({ data }: Props) {
+export function VolumeBarChart({ data, highlightSessionId }: Props) {
   const theme = useChartTheme();
 
   const chartData = data.map((p) => ({
     date: shortDate(p.session.performed_at),
     volume: totalVolume(p.sets),
+    sessionId: p.session.id,
   }));
 
   return (
@@ -53,7 +56,25 @@ export function VolumeBarChart({ data }: Props) {
           labelStyle={{ color: theme.muted }}
           formatter={(v) => [v != null ? `${v} kg` : '—', 'Volume']}
         />
-        <Bar dataKey="volume" fill={theme.accent} radius={[4, 4, 0, 0]} maxBarSize={32} />
+        <Bar
+          dataKey="volume"
+          fill={theme.accent}
+          radius={[4, 4, 0, 0]}
+          maxBarSize={32}
+          shape={(props: unknown) => {
+            const { payload, ...rest } = props as { payload?: { sessionId: string } };
+            const isHighlight =
+              highlightSessionId == null || payload?.sessionId === highlightSessionId;
+            return (
+              <Rectangle
+                {...rest}
+                radius={[4, 4, 0, 0]}
+                fill={theme.accent}
+                fillOpacity={isHighlight ? 1 : 0.35}
+              />
+            );
+          }}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

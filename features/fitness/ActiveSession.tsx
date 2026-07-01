@@ -14,7 +14,7 @@ import {
   updateSessionSet,
   type SessionSetPatch,
 } from '@/lib/queries/sessions';
-import { applyPlanProgress, type PlanAutoUpdate } from '@/lib/queries/plans';
+import { recomputePlanTargets, type PlanAutoUpdate } from '@/lib/queries/plans';
 import type { Exercise, SessionSet } from '@/lib/db/types';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -167,7 +167,7 @@ export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
   const finishMutation = useMutation({
     mutationFn: async (notes: string | null) => {
       await updateSession(supabase, sessionId, { notes });
-      return applyPlanProgress(supabase, sessionId);
+      return recomputePlanTargets(supabase, sessionId);
     },
     onSuccess: (updates) => {
       queryClient.invalidateQueries({ queryKey: fitnessKeys.sessions() });

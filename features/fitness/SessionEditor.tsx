@@ -15,6 +15,7 @@ import {
   updateSessionSet,
   type SessionSetPatch,
 } from '@/lib/queries/sessions';
+import { recomputePlanTargets } from '@/lib/queries/plans';
 import type { Exercise, SessionSet } from '@/lib/db/types';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -87,11 +88,25 @@ export function SessionEditor({ sessionId }: SessionEditorProps) {
       })),
     }));
 
+  // Editing a past session can move a plan target (correcting a bad number walks it back
+  // down; a fixed-up number can push it up). Re-derive the plan from the full history after
+  // any set change, and refresh the session's stored "Plan updated" banner + plan caches.
+  const reprogress = () =>
+    recomputePlanTargets(supabase, sessionId)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['session-detail', sessionId] });
+        queryClient.invalidateQueries({ queryKey: fitnessKeys.plans() });
+      })
+      .catch(() => {});
+
   const updateSetMutation = useMutation({
     mutationFn: ({ setId, fields }: { setId: string; fields: SessionSetPatch }) =>
       updateSessionSet(supabase, setId, fields),
     onMutate: ({ setId, fields }) => mergeSet(setId, fields),
-    onSuccess: (set) => replaceSet(set),
+    onSuccess: (set) => {
+      replaceSet(set);
+      reprogress();
+    },
     onError: () => queryClient.invalidateQueries({ queryKey: fitnessKeys.session(sessionId) }),
   });
 
@@ -140,13 +155,15 @@ export function SessionEditor({ sessionId }: SessionEditorProps) {
 
   const removeSetMutation = useMutation({
     mutationFn: (setId: string) => deleteSessionSet(supabase, setId),
-    onSuccess: (_d, setId) =>
+    onSuccess: (_d, setId) => {
       patch((prev) => ({
         ...prev,
         groups: prev.groups
           .map((g) => ({ ...g, sets: g.sets.filter((s) => s.id !== setId) }))
           .filter((g) => g.sets.length > 0),
-      })),
+      }));
+      reprogress();
+    },
   });
 
   const updateMetaMutation = useMutation({

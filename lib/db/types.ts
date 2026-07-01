@@ -6,6 +6,14 @@ export type RoadmapStatus = 'idea' | 'planned' | 'in_progress' | 'done';
 export type Priority = 'low' | 'medium' | 'high';
 export type AiSection = 'fitness' | 'school' | 'work';
 
+// One plan-target change caused by a session, persisted on workout_sessions.plan_updates
+// and surfaced as the "Plan updated" banner on a session's detail / compare view.
+export type PlanTargetChange = {
+  exerciseName: string;
+  from: { weight: number | null; reps: number | null };
+  to: { weight: number | null; reps: number | null };
+};
+
 type Timestamps = { created_at: string };
 
 export interface Database {
@@ -30,14 +38,14 @@ export interface Database {
         Relationships: [];
       };
       plan_sets: {
-        Row: { id: string; user_id: string; plan_exercise_id: string; position: number; target_reps: number | null; target_weight: number | null } & Timestamps;
-        Insert: { id?: string; user_id?: string; plan_exercise_id: string; position?: number; target_reps?: number | null; target_weight?: number | null; created_at?: string };
+        Row: { id: string; user_id: string; plan_exercise_id: string; position: number; target_reps: number | null; target_weight: number | null; base_reps: number | null; base_weight: number | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; plan_exercise_id: string; position?: number; target_reps?: number | null; target_weight?: number | null; base_reps?: number | null; base_weight?: number | null; created_at?: string };
         Update: Partial<Database['public']['Tables']['plan_sets']['Insert']>;
         Relationships: [];
       };
       workout_sessions: {
-        Row: { id: string; user_id: string; plan_id: string | null; title: string | null; performed_at: string; notes: string | null } & Timestamps;
-        Insert: { id?: string; user_id?: string; plan_id?: string | null; title?: string | null; performed_at?: string; notes?: string | null; created_at?: string };
+        Row: { id: string; user_id: string; plan_id: string | null; title: string | null; performed_at: string; notes: string | null; plan_updates: PlanTargetChange[] | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; plan_id?: string | null; title?: string | null; performed_at?: string; notes?: string | null; plan_updates?: PlanTargetChange[] | null; created_at?: string };
         Update: Partial<Database['public']['Tables']['workout_sessions']['Insert']>;
         Relationships: [];
       };

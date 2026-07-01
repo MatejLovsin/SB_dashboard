@@ -62,10 +62,28 @@ No active redesign tasks. Next work: new features or content updates.
   Dashboard widget `TodoDashboard` — card with today's checklist (optimistic toggle) + link cards
   to plan/review — placed between the morning briefing header and the KPI strip.
 
+- [x] **Auto-progressing premade plans** — training from a plan seeds `session_sets.plan_set_id`
+  (migration `0011`) so each logged set is tied to its plan target. On **Finish** (and whenever a
+  past session's sets are edited), `recomputePlanTargets` in `lib/queries/plans.ts` re-derives each
+  linked plan target from the **full logged history**, not a one-way ratchet. Rule lives in
+  `bestTargetFromHistory` (`lib/utils/stats.ts`): target = the hardest qualifying set (highest
+  est-1RM; weight never below the set's **baseline**), where baseline = `plan_sets.base_reps/
+  base_weight` (migration `0012`, backfilled from target; a manual plan-set edit resets it). So more
+  reps / higher-e1RM weight raises the target, a weak/deload day never lowers it (your best set still
+  stands), and **correcting a bad number walks it back down** (e.g. a typo'd 500 kg that bumped the
+  plan returns to 50 kg once you fix the source set — handled both before finishing and by editing the
+  finished session later). Changes are persisted per session in `workout_sessions.plan_updates`
+  (jsonb, migration `0012`) and shown as a **"Plan updated"** banner at the top of `SessionDetailBody`
+  — visible in the session log detail overlay **and** the Compare screen (which reuses that body). A
+  one-time summary screen also appears right after Finish (`PlanUpdateSummary` in `ActiveSession`).
+
 **Pending manual actions:** apply migrations `0006_exercise_pins.sql`, `0009_journal_weeks.sql`,
-**and `0010_todos.sql`** to Supabase (`supabase db push` / SQL editor). Until `0010` is applied,
-the todo widget/review degrade gracefully (queries catch errors → empty state). Until `0009` is
-applied, the journal widget + review degrade gracefully to a "no summaries / caught up" state.
+`0010_todos.sql`, `0011_session_set_plan_link.sql`, **and `0012_plan_progress.sql`** to Supabase
+(`supabase db push` / SQL editor). Until `0012` is applied, plan auto-progression degrades (the
+new `base_*` / `plan_updates` columns are missing, so queries error and no banner shows). Until
+`0010` is applied, the todo widget/review degrade gracefully (queries catch errors → empty state).
+Until `0009` is applied, the journal widget + review degrade gracefully to a "no summaries /
+caught up" state.
 
 ---
 

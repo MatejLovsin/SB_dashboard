@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, Check } from 'lucide-react';
+import { CalendarDays, Check, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getSessionWithSets } from '@/lib/queries/sessions';
 import { type SessionWithSets } from '@/lib/queries/fitness';
@@ -42,6 +42,36 @@ export function FitnessSessionDetail({ sessionId }: { sessionId: string }) {
   return <SessionDetailBody data={data} />;
 }
 
+function fmtTarget(v: { weight: number | null; reps: number | null }): string {
+  const reps = v.reps ?? '—';
+  return v.weight != null && v.weight > 0 ? `${v.weight} kg × ${reps}` : `${reps} reps`;
+}
+
+// Banner shown at the top of a session that auto-progressed its source plan.
+function PlanUpdatedBanner({ data }: { data: SessionWithSets }) {
+  const updates = data.session.plan_updates;
+  if (!updates || updates.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-accent/30 bg-accent-soft/60 p-3">
+      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+        <TrendingUp className="h-3.5 w-3.5" />
+        Plan updated
+      </div>
+      <ul className="mt-2 space-y-1">
+        {updates.map((u, i) => (
+          <li key={i} className="flex items-center justify-between gap-2 text-sm">
+            <span className="truncate font-medium text-foreground/90">{u.exerciseName}</span>
+            <span className="shrink-0 tabular-nums text-muted">
+              {fmtTarget(u.from)} →{' '}
+              <span className="font-semibold text-foreground">{fmtTarget(u.to)}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function SessionDetailBody({ data }: { data: SessionWithSets }) {
   const { session, groups } = data;
 
@@ -78,6 +108,9 @@ export function SessionDetailBody({ data }: { data: SessionWithSets }) {
         <CalendarDays className="h-3.5 w-3.5" />
         {date}
       </div>
+
+      {/* Plan auto-progression banner */}
+      <PlanUpdatedBanner data={data} />
 
       {/* Session notes */}
       {session.notes && (

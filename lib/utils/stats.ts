@@ -156,32 +156,48 @@ export function categorySplit(
     .sort((a, b) => b.value - a.value);
 }
 
-// Progressive-overload rule for premade plans. Given a plan set's current target and
-// the set actually performed, returns the new target when it was an improvement, else null.
-// Improvement = estimated 1RM strictly higher than planned, and the target weight is never
-// lowered. On a win the target becomes exactly what was performed (weight AND reps).
-export function progressedTarget(
-  planned: { target_weight: number | null; target_reps: number | null },
-  achieved: { weight: number | null; reps: number | null },
-): { target_weight: number | null; target_reps: number } | null {
-  const ar = achieved.reps;
-  if (ar == null || ar <= 0) return null;
-  const aw = achieved.weight;
-  const pw = planned.target_weight;
-  const pr = planned.target_reps;
+export type Target = { target_weight: number | null; target_reps: number | null };
+export type PerformedSet = { weight: number | null; reps: number | null };
 
-  // Weighted set.
-  if (aw != null && aw > 0) {
-    if (pw != null && aw < pw) return null; // never lower the target weight
-    const plannedE1RM = pw != null && pw > 0 && pr != null ? estimatedOneRepMax(pw, pr) : 0;
-    if (estimatedOneRepMax(aw, ar) > plannedE1RM) return { target_weight: aw, target_reps: ar };
-    return null;
+// Progressive-overload rule for premade plans, recomputed from scratch each time.
+// Given a plan set's baseline (what you intentionally set) and EVERY completed set ever
+// logged against it, returns the effective target: the baseline, raised to the hardest
+// qualifying performance. "Hardest" = highest estimated 1RM; the target weight is never
+// derived below the baseline weight. Because it reads the full history each run, a bad
+// day never lowers the target (your best set still stands), but correcting or deleting
+// the set that pushed the target up recomputes it back down — no one-way ratchet.
+export function bestTargetFromHistory(baseline: Target, history: PerformedSet[]): Target {
+  const bw = baseline.target_weight;
+  const weighted = bw != null && bw > 0;
+
+  let best: Target = { target_weight: baseline.target_weight, target_reps: baseline.target_reps };
+  let bestE = weighted
+    ? estimatedOneRepMax(bw, baseline.target_reps ?? 0)
+    : baseline.target_reps ?? 0;
+
+  for (const s of history) {
+    const r = s.reps;
+    if (r == null || r <= 0) continue;
+
+    if (weighted) {
+      // Weighted plan: ignore bodyweight logs and anything lighter than the baseline.
+      if (s.weight == null || s.weight <= 0 || s.weight < bw) continue;
+      const e = estimatedOneRepMax(s.weight, r);
+      if (e > bestE) {
+        bestE = e;
+        best = { target_weight: s.weight, target_reps: r };
+      }
+    } else {
+      // Bodyweight plan: ignore weighted logs; progress on reps only.
+      if (s.weight != null && s.weight > 0) continue;
+      if (r > bestE) {
+        bestE = r;
+        best = { target_weight: baseline.target_weight, target_reps: r };
+      }
+    }
   }
 
-  // Bodyweight set: only progresses a bodyweight plan target, and only on more reps.
-  if (pw != null && pw > 0) return null;
-  if (pr == null || ar > pr) return { target_weight: pw, target_reps: ar };
-  return null;
+  return best;
 }
 
 // The set with the highest estimated 1RM in a session — the "top set".

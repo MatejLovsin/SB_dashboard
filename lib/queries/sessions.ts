@@ -158,6 +158,26 @@ export async function addSessionSet(client: Client, input: SessionSetInput): Pro
   return data;
 }
 
+export async function reorderSessionExercises(
+  client: Client,
+  groups: { exercise_id: string; setIds: string[] }[],
+): Promise<void> {
+  const updates: { id: string; position: number }[] = [];
+  let position = 0;
+  for (const group of groups) {
+    for (const setId of group.setIds) updates.push({ id: setId, position: position++ });
+  }
+  await Promise.all(
+    updates.map(({ id, position }) =>
+      client
+        .from('session_sets')
+        .update({ position })
+        .eq('id', id)
+        .then(({ error }) => { if (error) throw error; }),
+    ),
+  );
+}
+
 export async function updateSessionSet(
   client: Client,
   setId: string,

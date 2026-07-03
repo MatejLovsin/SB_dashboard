@@ -10,6 +10,7 @@ import {
   deleteSession,
   deleteSessionSet,
   getSessionWithSets,
+  reorderSessionExercises,
   updateSession,
   updateSessionSet,
   type SessionSetPatch,
@@ -22,6 +23,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { TextArea } from '@/components/ui/TextArea';
 import { ExercisePicker } from './ExercisePicker';
 import { ExerciseBlock } from './SessionExerciseBlock';
+import { SortableExerciseList } from './SortableExerciseList';
 
 function nextPosition(data: SessionWithSets): number {
   let max = -1;
@@ -153,6 +155,30 @@ export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
       })),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (orderedExerciseIds: string[]) => {
+      if (!data) return Promise.resolve();
+      const byId = new Map(data.groups.map((g) => [g.exercise_id, g]));
+      const groups = orderedExerciseIds.flatMap((id) => {
+        const g = byId.get(id);
+        return g ? [{ exercise_id: id, setIds: g.sets.map((s) => s.id) }] : [];
+      });
+      return reorderSessionExercises(supabase, groups);
+    },
+    onMutate: (orderedExerciseIds) =>
+      patch((prev) => {
+        const byId = new Map(prev.groups.map((g) => [g.exercise_id, g]));
+        return {
+          ...prev,
+          groups: orderedExerciseIds.flatMap((id) => {
+            const g = byId.get(id);
+            return g ? [g] : [];
+          }),
+        };
+      }),
+    onError: () => queryClient.invalidateQueries({ queryKey: fitnessKeys.session(sessionId) }),
+  });
+
   const removeSetMutation = useMutation({
     mutationFn: (setId: string) => deleteSessionSet(supabase, setId),
     onSuccess: (_d, setId) =>
@@ -209,17 +235,24 @@ export function ActiveSession({ sessionId, onFinish }: ActiveSessionProps) {
         </p>
       </div>
 
-      {groups.map((group) => (
-        <ExerciseBlock
-          key={group.exercise_id}
-          group={group}
-          setBusy={setBusy}
-          onToggle={(set) => updateSetMutation.mutate({ setId: set.id, fields: { completed: !set.completed } })}
-          onCommit={(setId, fields) => updateSetMutation.mutate({ setId, fields })}
-          onAddSet={() => addSetMutation.mutate(group)}
-          onRemoveSet={(setId) => removeSetMutation.mutate(setId)}
-        />
-      ))}
+      <SortableExerciseList
+        ids={groups.map((g) => g.exercise_id)}
+        onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
+      >
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <ExerciseBlock
+              key={group.exercise_id}
+              group={group}
+              setBusy={setBusy}
+              onToggle={(set) => updateSetMutation.mutate({ setId: set.id, fields: { completed: !set.completed } })}
+              onCommit={(setId, fields) => updateSetMutation.mutate({ setId, fields })}
+              onAddSet={() => addSetMutation.mutate(group)}
+              onRemoveSet={(setId) => removeSetMutation.mutate(setId)}
+            />
+          ))}
+        </div>
+      </SortableExerciseList>
 
       <Card>
         <CardTitle className="mb-3">Add exercise</CardTitle>

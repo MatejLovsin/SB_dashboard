@@ -8,6 +8,7 @@ import type { SessionSet } from '@/lib/db/types';
 import type { SessionSetGroup } from '@/lib/queries/fitness';
 import type { SessionSetPatch } from '@/lib/queries/sessions';
 import { Card } from '@/components/ui/Card';
+import { DragHandle, useExerciseSortable } from './SortableExerciseList';
 
 // ---------------------------------------------------------------------------
 // ExerciseBlock — one exercise group within an active session
@@ -30,42 +31,47 @@ export function ExerciseBlock({
   onAddSet,
   onRemoveSet,
 }: ExerciseBlockProps) {
+  const { setNodeRef, style, handleProps } = useExerciseSortable(group.exercise_id);
+
   return (
-    <Card>
-      <div className="mb-3 flex items-center gap-2">
-        <Dumbbell className="h-4 w-4 shrink-0 text-muted" />
-        <h2 className="min-w-0 flex-1 truncate font-semibold">
-          {group.exercise?.name ?? 'Unknown exercise'}
-        </h2>
-      </div>
+    <div ref={setNodeRef} style={style}>
+      <Card>
+        <div className="mb-3 flex items-center gap-2">
+          <DragHandle {...handleProps} />
+          <Dumbbell className="h-4 w-4 shrink-0 text-muted" />
+          <h2 className="min-w-0 flex-1 truncate font-semibold">
+            {group.exercise?.name ?? 'Unknown exercise'}
+          </h2>
+        </div>
 
-      <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium text-muted">
-        <span className="w-8">Set</span>
-        <span className="flex-1 text-center">Reps</span>
-        <span className="flex-1 text-center">Weight</span>
-        <span className="w-11 text-center">Done</span>
-        <span className="w-9" />
-      </div>
+        <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium text-muted">
+          <span className="w-8">Set</span>
+          <span className="flex-1 text-center">Reps</span>
+          <span className="flex-1 text-center">Weight</span>
+          <span className="w-11 text-center">Done</span>
+          <span className="w-9" />
+        </div>
 
-      <ul className="space-y-2">
-        {group.sets.map((set, index) => (
-          <SessionSetRow
-            key={set.id}
-            set={set}
-            number={index + 1}
-            busy={setBusy}
-            onToggle={() => onToggle(set)}
-            onCommit={(fields) => onCommit(set.id, fields)}
-            onRemove={() => onRemoveSet(set.id)}
-          />
-        ))}
-      </ul>
+        <ul className="space-y-2">
+          {group.sets.map((set, index) => (
+            <SessionSetRow
+              key={set.id}
+              set={set}
+              number={index + 1}
+              busy={setBusy}
+              onToggle={() => onToggle(set)}
+              onCommit={(fields) => onCommit(set.id, fields)}
+              onRemove={() => onRemoveSet(set.id)}
+            />
+          ))}
+        </ul>
 
-      <Button size="sm" variant="secondary" className="mt-3" disabled={setBusy} onClick={onAddSet}>
-        <Plus className="h-4 w-4" />
-        Add set
-      </Button>
-    </Card>
+        <Button size="sm" variant="secondary" className="mt-3" disabled={setBusy} onClick={onAddSet}>
+          <Plus className="h-4 w-4" />
+          Add set
+        </Button>
+      </Card>
+    </div>
   );
 }
 

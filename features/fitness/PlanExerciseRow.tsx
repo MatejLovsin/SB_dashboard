@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { PlanSet } from '@/lib/db/types';
 import type { PlanExerciseLine } from '@/lib/queries/fitness';
 import type { PlanSetTargets } from '@/lib/queries/plans';
+import { DragHandle, useExerciseSortable } from './SortableExerciseList';
 
 // ---------------------------------------------------------------------------
 // ExerciseCard — one plan exercise with its set rows
@@ -14,12 +15,8 @@ import type { PlanSetTargets } from '@/lib/queries/plans';
 
 export interface ExerciseCardProps {
   line: PlanExerciseLine;
-  isFirst: boolean;
-  isLast: boolean;
   exerciseBusy: boolean;
   setBusy: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onRemove: () => void;
   onAddSet: () => void;
   onUpdateSet: (setId: string, patch: PlanSetTargets) => void;
@@ -28,30 +25,23 @@ export interface ExerciseCardProps {
 
 export function ExerciseCard({
   line,
-  isFirst,
-  isLast,
   exerciseBusy,
   setBusy,
-  onMoveUp,
-  onMoveDown,
   onRemove,
   onAddSet,
   onUpdateSet,
   onRemoveSet,
 }: ExerciseCardProps) {
+  const { setNodeRef, style, handleProps } = useExerciseSortable(line.id);
+
   return (
-    <li className="rounded-xl border border-border p-3">
+    <li ref={setNodeRef} style={style} className="rounded-xl border border-border bg-card p-3">
       <div className="flex items-start gap-2">
-        <p className="min-w-0 flex-1 truncate font-medium">
+        <DragHandle {...handleProps} />
+        <p className="min-w-0 flex-1 truncate self-center font-medium">
           {line.exercise?.name ?? 'Unknown exercise'}
         </p>
         <div className="flex shrink-0 items-center gap-1">
-          <Button size="icon" variant="ghost" aria-label="Move up" disabled={isFirst || exerciseBusy} onClick={onMoveUp}>
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button size="icon" variant="ghost" aria-label="Move down" disabled={isLast || exerciseBusy} onClick={onMoveDown}>
-            <ChevronDown className="h-4 w-4" />
-          </Button>
           <Button size="icon" variant="danger" aria-label="Remove exercise" disabled={exerciseBusy} onClick={onRemove}>
             <Trash2 className="h-4 w-4" />
           </Button>

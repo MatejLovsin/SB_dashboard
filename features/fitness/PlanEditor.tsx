@@ -25,6 +25,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PlanForm } from './PlanForm';
 import { ExercisePicker } from './ExercisePicker';
 import { ExerciseCard } from './PlanExerciseRow';
+import { SortableExerciseList } from './SortableExerciseList';
 
 export function PlanEditor({ planId }: { planId: string }) {
   const supabase = createClient();
@@ -89,7 +90,7 @@ export function PlanEditor({ planId }: { planId: string }) {
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) => reorderPlanExercises(supabase, orderedIds),
-    onSuccess: (_d, orderedIds) =>
+    onMutate: (orderedIds) =>
       patchPlan((prev) => {
         const byId = new Map(prev.lines.map((l) => [l.id, l]));
         return {
@@ -100,6 +101,7 @@ export function PlanEditor({ planId }: { planId: string }) {
           }),
         };
       }),
+    onError: () => queryClient.invalidateQueries({ queryKey: fitnessKeys.plan(planId) }),
   });
 
   const addSetMutation = useMutation({
@@ -126,15 +128,6 @@ export function PlanEditor({ planId }: { planId: string }) {
         lines: prev.lines.map((l) => ({ ...l, sets: l.sets.filter((s) => s.id !== setId) })),
       })),
   });
-
-  function move(index: number, direction: -1 | 1) {
-    if (!data) return;
-    const target = index + direction;
-    if (target < 0 || target >= data.lines.length) return;
-    const ids = data.lines.map((l) => l.id);
-    [ids[index], ids[target]] = [ids[target], ids[index]];
-    reorderMutation.mutate(ids);
-  }
 
   function addSet(line: PlanExerciseLine) {
     const last = line.sets.at(-1);
@@ -190,24 +183,25 @@ export function PlanEditor({ planId }: { planId: string }) {
             className="mb-4"
           />
         ) : (
-          <ul className="mb-4 space-y-3">
-            {lines.map((line, index) => (
-              <ExerciseCard
-                key={line.id}
-                line={line}
-                isFirst={index === 0}
-                isLast={index === lines.length - 1}
-                exerciseBusy={exerciseBusy}
-                setBusy={setBusy}
-                onMoveUp={() => move(index, -1)}
-                onMoveDown={() => move(index, 1)}
-                onRemove={() => removeExerciseMutation.mutate(line.id)}
-                onAddSet={() => addSet(line)}
-                onUpdateSet={(setId, patch) => updateSetMutation.mutate({ setId, patch })}
-                onRemoveSet={(setId) => removeSetMutation.mutate(setId)}
-              />
-            ))}
-          </ul>
+          <SortableExerciseList
+            ids={lines.map((l) => l.id)}
+            onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
+          >
+            <ul className="mb-4 space-y-3">
+              {lines.map((line) => (
+                <ExerciseCard
+                  key={line.id}
+                  line={line}
+                  exerciseBusy={exerciseBusy}
+                  setBusy={setBusy}
+                  onRemove={() => removeExerciseMutation.mutate(line.id)}
+                  onAddSet={() => addSet(line)}
+                  onUpdateSet={(setId, patch) => updateSetMutation.mutate({ setId, patch })}
+                  onRemoveSet={(setId) => removeSetMutation.mutate(setId)}
+                />
+              ))}
+            </ul>
+          </SortableExerciseList>
         )}
         <ExercisePicker onSelect={(exercise) => addExerciseMutation.mutate(exercise)} />
         {addExerciseMutation.isPending ? (

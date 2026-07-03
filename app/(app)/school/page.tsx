@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, ChevronRight, ClipboardList, History, Archive } from 'lucide-react';
+import { BookOpen, ChevronRight, ClipboardList, History, Archive, LineChart } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { StatTile } from '@/components/ui/StatTile';
@@ -137,6 +137,18 @@ export default async function SchoolPage() {
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">Discarded</span>
               <span className="block text-xs text-muted">Recover lost sessions</span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
+          </Card>
+        </Link>
+        <Link href="/school/insights" className="col-span-2 block">
+          <Card className="panel-hover press-flash flex items-center gap-3 p-3">
+            <span className="rounded-lg bg-card-2 p-2 text-muted">
+              <LineChart className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">Grade Insights</span>
+              <span className="block text-xs text-muted">Grade vs. study time</span>
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
           </Card>

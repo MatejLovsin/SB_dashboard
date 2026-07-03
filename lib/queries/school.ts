@@ -12,6 +12,7 @@ export const schoolKeys = {
   studySessions: (subjectId: string) => [...schoolKeys.all, 'studySessions', subjectId] as const,
   allSessions: () => [...schoolKeys.all, 'allSessions'] as const,
   discarded: () => [...schoolKeys.all, 'discarded'] as const,
+  gradedExams: () => [...schoolKeys.all, 'gradedExams'] as const,
 };
 
 export type SubjectInput = { name: string; color?: string | null };
@@ -206,6 +207,58 @@ export async function getStudySecondsForExams(
     map.set(row.exam_id, (map.get(row.exam_id) ?? 0) + row.duration_seconds);
   }
   return map;
+}
+
+export type GradedExamPoint = {
+  id: string;
+  subjectId: string;
+  subjectName: string;
+  subjectColor: string | null;
+  title: string | null;
+  examDate: string;
+  grade: number;
+  difficulty: number | null;
+  hoursStudied: number;
+  targetHours: number | null;
+};
+
+export async function listGradedExamsWithStudyHours(client: Client): Promise<GradedExamPoint[]> {
+  const { data: rows, error: examsError } = await client
+    .from('exams')
+    .select('*')
+    .not('grade', 'is', null)
+    .order('exam_date', { ascending: true });
+  if (examsError) throw examsError;
+
+  const exams = rows ?? [];
+  if (exams.length === 0) return [];
+
+  const subjectIds = [...new Set(exams.map((e) => e.subject_id))];
+  const { data: subjects, error: subjectsError } = await client
+    .from('subjects')
+    .select('id, name, color')
+    .in('id', subjectIds);
+  if (subjectsError) throw subjectsError;
+
+  const subMap = new Map((subjects ?? []).map((s) => [s.id, { name: s.name, color: s.color }]));
+  const studyMap = await getStudySecondsForExams(client, exams.map((e) => e.id));
+
+  return exams.map((exam) => {
+    const subject = subMap.get(exam.subject_id);
+    const seconds = studyMap.get(exam.id) ?? 0;
+    return {
+      id: exam.id,
+      subjectId: exam.subject_id,
+      subjectName: subject?.name ?? 'Unknown',
+      subjectColor: subject?.color ?? null,
+      title: exam.title,
+      examDate: exam.exam_date,
+      grade: exam.grade as number,
+      difficulty: exam.perceived_difficulty,
+      hoursStudied: Math.round((seconds / 3600) * 10) / 10,
+      targetHours: exam.target_study_hours,
+    };
+  });
 }
 
 export async function listUpcomingExamsWithProgress(

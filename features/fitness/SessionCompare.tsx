@@ -14,9 +14,12 @@ import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SessionDetailBody } from '@/features/fitness/FitnessSessionDetail';
+import { ModeToggle } from './ModeToggle';
+import { CardioCompare } from './CardioCompare';
 
 export function SessionCompare() {
   const supabase = createClient();
+  const [mode, setMode] = useState<'weights' | 'cardio'>('weights');
   const [selected, setSelected] = useState<SessionCategory | null>(null);
 
   const { data: categories, isLoading: catsLoading } = useQuery({
@@ -46,7 +49,11 @@ export function SessionCompare() {
         description="Your last 3 sessions in a category, side by side."
       />
 
-      {catsLoading ? (
+      <ModeToggle mode={mode} onChange={setMode} />
+
+      {mode === 'cardio' ? (
+        <CardioCompare />
+      ) : catsLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted">
           <Spinner /> Loading…
         </div>

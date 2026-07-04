@@ -11,9 +11,12 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { ExerciseLibraryCard } from './ExerciseLibraryCard';
 import { ExerciseDetail } from './ExerciseDetail';
+import { ModeToggle } from './ModeToggle';
+import { CardioActivityLibrary } from './CardioActivityLibrary';
 
 export function ExerciseLibrary() {
   const supabase = createClient();
+  const [mode, setMode] = useState<'weights' | 'cardio'>('weights');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -24,7 +27,7 @@ export function ExerciseLibrary() {
   });
 
   // If detail view is requested, find the entry and render it
-  if (selectedId !== null) {
+  if (mode === 'weights' && selectedId !== null) {
     const entry = exercises?.find((e) => e.id === selectedId);
     if (!entry) {
       // Entry not found (loading or gone) — fall through to browse
@@ -66,6 +69,12 @@ export function ExerciseLibrary() {
         </Link>
       </div>
 
+      <ModeToggle mode={mode} onChange={setMode} />
+
+      {mode === 'cardio' ? (
+        <CardioActivityLibrary />
+      ) : (
+        <>
       {/* Search input */}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -101,6 +110,8 @@ export function ExerciseLibrary() {
             />
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

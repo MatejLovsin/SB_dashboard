@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { listSessions, getSessionSetsBySessionIds } from '@/lib/queries/analytics';
+import { listSessions, getSessionSetsBySessionIds, getCombinedTrainingConsistency } from '@/lib/queries/analytics';
 import { getBodyMetrics } from '@/lib/queries/fitness';
 import {
   sessionsPerWeek,
@@ -16,6 +16,7 @@ import dynamic from 'next/dynamic';
 import { StatTile } from '@/components/ui/StatTile';
 import { ChartCard } from '@/components/charts/ChartCard';
 import { BodyweightLogger } from './BodyweightLogger';
+import { ConsistencyHeatmap } from './charts/ConsistencyHeatmap';
 import { AlertTriangle } from 'lucide-react';
 import type { AreaTrendPoint } from '@/components/charts/AreaTrend';
 import type { BarPoint } from '@/components/charts/BarCluster';
@@ -45,9 +46,10 @@ function fmtVol(v: number): string {
 export async function FitnessOverview() {
   const supabase = await createClient();
 
-  const [sessions, bodyMetricsRaw] = await Promise.all([
+  const [sessions, bodyMetricsRaw, combinedConsistency] = await Promise.all([
     listSessions(supabase, { from: ninetyDaysAgo() }),
     getBodyMetrics(supabase, 60).catch(() => []),
+    getCombinedTrainingConsistency(supabase, 12).catch(() => null),
   ]);
 
   const sets = await getSessionSetsBySessionIds(
@@ -200,6 +202,23 @@ export async function FitnessOverview() {
           name="sessions"
         />
       </ChartCard>
+
+      {/* ── Overall consistency (weights + cardio combined) ──────────────────
+          Kept to one compact panel — weightlifting stays the visual focus of
+          this page; this just answers "am I training consistently overall." */}
+      {combinedConsistency && (
+        <div className="panel rounded-2xl p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-widest text-muted">
+              Overall consistency
+            </span>
+            <span className="text-xs text-muted">
+              {combinedConsistency.streakWeeks} wk streak · {combinedConsistency.sessionsThisWeek} this week
+            </span>
+          </div>
+          <ConsistencyHeatmap activeDays={combinedConsistency.activeDays} weeks={12} />
+        </div>
+      )}
 
       {/* ── Category split ────────────────────────────────────────────────── */}
       {catSplit.length > 0 && (

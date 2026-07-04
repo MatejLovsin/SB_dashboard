@@ -3,20 +3,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { ChevronRight, Dumbbell, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, HeartPulse, Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { fitnessKeys } from '@/lib/queries/fitness';
-import { listSessions, getSessionSetsBySessionIds } from '@/lib/queries/analytics';
-import { deleteSession } from '@/lib/queries/sessions';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { cardioKeys, listCardioSessions, deleteCardioSession } from '@/lib/queries/cardio';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
-import { FitnessSessionDetail } from './FitnessSessionDetail';
-import { ModeToggle } from './ModeToggle';
-import { CardioSessionList } from './CardioSessionList';
+import { CardioSessionDetail } from './CardioSessionDetail';
 
 function formatDate(iso: string): string {
   return new Date(iso.slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-US', {
@@ -28,56 +23,35 @@ function formatDate(iso: string): string {
   });
 }
 
-export function SessionList() {
+export function CardioSessionList() {
   const supabase = createClient();
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [mode, setMode] = useState<'weights' | 'cardio'>('weights');
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
-  // Retain the last focused id so content stays visible during the exit animation.
   const lastFocusSessionId = useRef<string | null>(null);
   if (focusSessionId) lastFocusSessionId.current = focusSessionId;
   const displayId = focusSessionId ?? lastFocusSessionId.current;
 
   const { data, isPending, isError, error } = useQuery({
-    queryKey: [...fitnessKeys.sessions(), 'with-counts'],
-    queryFn: async () => {
-      const sessions = await listSessions(supabase, { limit: 60 });
-      if (sessions.length === 0) return { sessions, exerciseCounts: new Map<string, number>() };
-      const allSets = await getSessionSetsBySessionIds(supabase, sessions.map((s) => s.id));
-      const bySession = new Map<string, Set<string>>();
-      for (const set of allSets) {
-        if (!bySession.has(set.session_id)) bySession.set(set.session_id, new Set());
-        bySession.get(set.session_id)!.add(set.exercise_id);
-      }
-      const exerciseCounts = new Map<string, number>();
-      for (const [sid, exSet] of bySession) exerciseCounts.set(sid, exSet.size);
-      return { sessions, exerciseCounts };
-    },
+    queryKey: cardioKeys.sessions(),
+    queryFn: () => listCardioSessions(supabase, 60),
     staleTime: 30_000,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (sessionId: string) => deleteSession(supabase, sessionId),
+    mutationFn: (sessionId: string) => deleteCardioSession(supabase, sessionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: fitnessKeys.sessions() });
+      queryClient.invalidateQueries({ queryKey: cardioKeys.sessions() });
+      queryClient.invalidateQueries({ queryKey: cardioKeys.activityLibrary() });
     },
   });
 
   return (
     <div>
-      <PageHeader title="Session log" description="All past workouts. Tap to view or edit." />
-
-      <ModeToggle mode={mode} onChange={setMode} />
-
-      {mode === 'cardio' ? (
-        <CardioSessionList />
-      ) : (
-        <>
       <div className="mb-4 flex justify-end">
-        <Button variant="secondary" onClick={() => router.push('/fitness/log')}>
-          + Log workout
+        <Button variant="secondary" onClick={() => router.push('/fitness/cardio')}>
+          + Log cardio
         </Button>
       </div>
 
@@ -87,18 +61,18 @@ export function SessionList() {
         </div>
       ) : isError ? (
         <p className="text-sm text-red-600 dark:text-red-400">{(error as Error).message}</p>
-      ) : !data || data.sessions.length === 0 ? (
+      ) : !data || data.length === 0 ? (
         <EmptyState
-          icon={Dumbbell}
-          title="No sessions yet"
-          description="Complete a workout to see it here."
+          icon={HeartPulse}
+          title="No cardio sessions yet"
+          description="Log a cardio session to see it here."
         />
       ) : (
         <ul className="space-y-2">
-          {data.sessions.map((session) => {
-            const exCount = data.exerciseCounts.get(session.id) ?? 0;
-            const isDeleting =
-              deleteMutation.isPending && deleteMutation.variables === session.id;
+          {data.map(({ session, entries }) => {
+            const activityNames = [...new Set(entries.map((e) => e.activity))];
+            const totalDuration = Math.round(entries.reduce((s, e) => s + Number(e.duration_minutes), 0));
+            const isDeleting = deleteMutation.isPending && deleteMutation.variables === session.id;
 
             return (
               <li key={session.id}>
@@ -108,12 +82,12 @@ export function SessionList() {
                     className="min-w-0 flex-1 text-left"
                     onClick={() => setFocusSessionId(session.id)}
                   >
-                    <p className="truncate font-medium">{session.title ?? 'Workout'}</p>
+                    <p className="truncate font-medium">
+                      {activityNames.length > 0 ? activityNames.join(', ') : 'Cardio'}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted">
                       {formatDate(session.performed_at)}
-                      {exCount > 0
-                        ? ` · ${exCount} exercise${exCount === 1 ? '' : 's'}`
-                        : ''}
+                      {totalDuration > 0 ? ` · ${totalDuration} min` : ''}
                     </p>
                   </button>
 
@@ -124,11 +98,7 @@ export function SessionList() {
                     aria-label="Delete session"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (
-                        confirm(
-                          `Delete "${session.title ?? 'Workout'}"? All sets will be lost.`,
-                        )
-                      ) {
+                      if (confirm('Delete this cardio session? All activities will be lost.')) {
                         deleteMutation.mutate(session.id);
                       }
                     }}
@@ -150,8 +120,8 @@ export function SessionList() {
       <FocusOverlay
         open={!!focusSessionId}
         onClose={() => setFocusSessionId(null)}
-        title={displayId ? (data?.sessions.find((s) => s.id === displayId)?.title ?? 'Workout') : undefined}
-        label="Workout"
+        title="Cardio session"
+        label="Cardio session"
         action={
           displayId ? (
             <Button
@@ -162,7 +132,7 @@ export function SessionList() {
               onClick={() => {
                 const id = displayId;
                 setFocusSessionId(null);
-                router.push(`/fitness/sessions/${id}`);
+                router.push(`/fitness/cardio/sessions/${id}`);
               }}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -170,10 +140,8 @@ export function SessionList() {
           ) : null
         }
       >
-        {displayId && <FitnessSessionDetail sessionId={displayId} />}
+        {displayId && <CardioSessionDetail sessionId={displayId} />}
       </FocusOverlay>
-        </>
-      )}
     </div>
   );
 }

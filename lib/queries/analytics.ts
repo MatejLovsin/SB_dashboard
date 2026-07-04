@@ -194,6 +194,46 @@ export async function getExerciseHistory(
     .filter((p): p is ExerciseSessionPoint => p !== undefined);
 }
 
+export type CombinedConsistency = {
+  streakWeeks: number;
+  sessionsThisWeek: number;
+  activeDays: string[]; // ISO dates, either type, last `weeks` weeks
+  weeklyCounts: { weekStart: string; count: number }[];
+};
+
+// Weights + cardio sessions merged, purely by performed_at — answers "am I
+// training consistently overall," independent of which type. Both tables only
+// need to expose `performed_at`, so the existing sessionsPerWeek/currentStreakWeeks
+// helpers (already generic over `{ performed_at }`) apply directly to the merge.
+export async function getCombinedTrainingConsistency(
+  client: Client,
+  weeks = 12,
+): Promise<CombinedConsistency> {
+  const daysBack = weeks * 7 + 7;
+  const since = new Date(Date.now() - daysBack * 24 * 3600 * 1000).toISOString();
+
+  const [{ data: liftSessions, error: liftError }, { data: cardioSessions, error: cardioError }] =
+    await Promise.all([
+      client.from('workout_sessions').select('performed_at').gte('performed_at', since),
+      client.from('cardio_sessions').select('performed_at').gte('performed_at', since),
+    ]);
+  if (liftError) throw liftError;
+  if (cardioError) throw cardioError;
+
+  const combined = [...(liftSessions ?? []), ...(cardioSessions ?? [])];
+  const thisMonday = mondayOf(new Date());
+  const sessionsThisWeek = combined.filter((s) => mondayOf(new Date(s.performed_at)) === thisMonday).length;
+
+  const activeDays = [...new Set(combined.map((s) => s.performed_at.slice(0, 10)))];
+
+  return {
+    streakWeeks: currentStreakWeeks(combined),
+    sessionsThisWeek,
+    activeDays,
+    weeklyCounts: sessionsPerWeek(combined, weeks),
+  };
+}
+
 export type SessionCategory = { key: string; label: string; count: number };
 
 /**

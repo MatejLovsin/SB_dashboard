@@ -127,6 +127,18 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['todos']['Insert']>;
         Relationships: [];
       };
+      cardio_sessions: {
+        Row: { id: string; user_id: string; performed_at: string; notes: string | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; performed_at?: string; notes?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['cardio_sessions']['Insert']>;
+        Relationships: [];
+      };
+      cardio_entries: {
+        Row: { id: string; user_id: string; session_id: string; activity: string; position: number; duration_minutes: number; intensity: number; distance_km: number | null; notes: string | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; session_id: string; activity: string; position?: number; duration_minutes: number; intensity: number; distance_km?: number | null; notes?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['cardio_entries']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -160,3 +172,5 @@ export type BodyMetric = Tables<'body_metrics'>;
 export type JournalWeek = Tables<'journal_weeks'>;
 export type TodoPin = Tables<'todo_pins'>;
 export type Todo = Tables<'todos'>;
+export type CardioSession = Tables<'cardio_sessions'>;
+export type CardioEntry = Tables<'cardio_entries'>;

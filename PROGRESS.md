@@ -82,13 +82,57 @@ No active redesign tasks. Next work: new features or content updates.
   — visible in the session log detail overlay **and** the Compare screen (which reuses that body). A
   one-time summary screen also appears right after Finish (`PlanUpdateSummary` in `ActiveSession`).
 
+- [x] **Cardio logging** — `/fitness/cardio` (component `CardioLogger`), linked from the fitness
+  hub's action grid (now 2x2 → 4-across on `lg`) alongside Start workout / Session log / Compare.
+  Separate from weightlifting: a `cardio_sessions` row holds one or more `cardio_entries`
+  (migration `0013_cardio.sql`), one per machine/activity, each with a freeform `activity` name
+  (typed, not a dictionary — quick-select chips suggest recently used names via
+  `listRecentActivityNames`), `duration_minutes`, optional `distance_km`, and its own `notes`.
+  **Intensity is a universal 1-10 RPE (perceived exertion) score** — chosen specifically so it's
+  comparable across activities that expose different stats (treadmill incline+speed vs.
+  stairmaster speed-only vs. an outdoor hike with no machine stats at all); machine-specific
+  numbers are not stored as structured fields, just folded into the entry's free-text notes.
+  Query layer in `lib/queries/cardio.ts` (`createCardioSession`, `getCardioSessionWithEntries`,
+  `listCardioSessions`, `deleteCardioSession`) mirrors the create-session-then-insert-children
+  pattern from `lib/queries/sessions.ts`.
+
+- [x] **Cardio history / compare / activity breakdown** — added as a **"Weights | Cardio" toggle**
+  inside the *existing* Session log, Compare, and Exercises screens (component `ModeToggle`), not
+  as new hub cards — keeps weightlifting the visually dominant part of `/fitness` per explicit
+  request. Three pieces:
+  - **History** (`/fitness/sessions`, Cardio mode) — `CardioSessionList` lists past cardio
+    sessions (date + activity names + total duration), tap → read-only `CardioSessionDetail` in
+    the shared `FocusOverlay`, pencil → full editor at `/fitness/cardio/sessions/[id]`
+    (`CardioSessionEditor`: per-entry field edits via onBlur, add/remove activity, delete
+    session). New query fns: `updateCardioSession`, `updateCardioEntry`, `addCardioEntry`,
+    `deleteCardioEntry` in `lib/queries/cardio.ts`.
+  - **Compare** (`/fitness/compare`, Cardio mode) — `CardioCompare` shows the last 3 cardio
+    sessions side-by-side. Deliberately **no grouping** (unlike the weights side's Push/Pull/Legs
+    category grouping) — cardio activities don't repeat predictably enough session-to-session to
+    make a grouped comparison useful.
+  - **Activity breakdown** (`/fitness/history`, Cardio mode) — `CardioActivityLibrary` browses
+    activities grouped by (case-insensitive) name — mirrors weights' Exercise Library — each card
+    showing avg RPE, session count, total duration, and an RPE sparkline (reusing
+    `components/charts/Sparkline`). Click → `CardioActivityDetail`: per-activity drill-down with
+    RPE trend + duration trend charts (new `features/fitness/charts/CardioTrendChart.tsx`),
+    12-week `ConsistencyHeatmap`, and a recent-sessions list. New query fns:
+    `getCardioActivityLibrary`, `getCardioActivityHistory` in `lib/queries/cardio.ts`.
+
+  Separately, **`FitnessOverview`** (`/fitness/overview`) gained one compact combined panel —
+  "Overall consistency" — showing a **weights + cardio merged** streak/this-week count and
+  12-week heatmap, via `getCombinedTrainingConsistency` in `lib/queries/analytics.ts` (reuses the
+  existing `sessionsPerWeek`/`currentStreakWeeks` helpers, which are already generic over any
+  `{ performed_at }` array — no new stats logic needed). Kept to a single panel, not a new KPI
+  row, for the same reason as above.
+
 **Pending manual actions:** apply migrations `0006_exercise_pins.sql`, `0009_journal_weeks.sql`,
-`0010_todos.sql`, `0011_session_set_plan_link.sql`, **and `0012_plan_progress.sql`** to Supabase
-(`supabase db push` / SQL editor). Until `0012` is applied, plan auto-progression degrades (the
-new `base_*` / `plan_updates` columns are missing, so queries error and no banner shows). Until
-`0010` is applied, the todo widget/review degrade gracefully (queries catch errors → empty state).
-Until `0009` is applied, the journal widget + review degrade gracefully to a "no summaries /
-caught up" state.
+`0010_todos.sql`, `0011_session_set_plan_link.sql`, `0012_plan_progress.sql`, **and
+`0013_cardio.sql`** to Supabase (`supabase db push` / SQL editor). Until `0013` is applied, the
+cardio logging page will error on save (tables don't exist yet). Until `0012` is applied, plan
+auto-progression degrades (the new `base_*` / `plan_updates` columns are missing, so queries error
+and no banner shows). Until `0010` is applied, the todo widget/review degrade gracefully (queries
+catch errors → empty state). Until `0009` is applied, the journal widget + review degrade
+gracefully to a "no summaries / caught up" state.
 
 ---
 

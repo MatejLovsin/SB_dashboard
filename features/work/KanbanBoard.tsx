@@ -26,6 +26,19 @@ const COLUMNS: { status: RoadmapStatus; label: string; color: string }[] = [
   { status: 'done', label: 'Done', color: 'bg-[var(--up)]/15 text-[var(--up)]' },
 ];
 
+const PRIORITY_RANK: Record<Priority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+function comparePriority(a: RoadmapCard, b: RoadmapCard): number {
+  const rankA = a.priority ? PRIORITY_RANK[a.priority] : PRIORITY_RANK.low + 1;
+  const rankB = b.priority ? PRIORITY_RANK[b.priority] : PRIORITY_RANK.low + 1;
+  if (rankA !== rankB) return rankA - rankB;
+  return a.position - b.position;
+}
+
 const NEXT_STATUS: Partial<Record<RoadmapStatus, RoadmapStatus>> = {
   idea: 'planned',
   planned: 'in_progress',
@@ -341,7 +354,7 @@ export function KanbanBoard() {
       {COLUMNS.map(({ status, label, color }) => {
         const columnCards = cards
           .filter((c) => c.status === status)
-          .sort((a, b) => a.position - b.position);
+          .sort(comparePriority);
 
         return (
           <KanbanColumn

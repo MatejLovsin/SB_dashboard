@@ -125,9 +125,27 @@ No active redesign tasks. Next work: new features or content updates.
   `{ performed_at }` array — no new stats logic needed). Kept to a single panel, not a new KPI
   row, for the same reason as above.
 
+- [x] **Work boards** — the `/work` Kanban is now split into user-named **boards** (table
+  `work_boards`, migration `0014_work_boards.sql`), so unrelated projects don't pile into one
+  unreadable board. `roadmap_cards.board_id` (not null, FK cascade-delete) scopes every card to a
+  board; the migration seeds a `"Main"` board per existing user and backfills all current cards
+  onto it. UI: `BoardTabs` in `KanbanBoard.tsx` — pill tabs above the columns, click to switch
+  (only the selected board's cards are ever shown — no "all boards" view by design), "+ Board" to
+  type a new name inline, pencil/trash on the active tab to rename or delete (delete cascades all
+  its cards; blocked via a `boards.length > 1` guard so you can never delete the last board — no
+  empty-board-list state to handle). Last-selected board persists in `localStorage`
+  (`work-selected-board`) and restores on reload. Query layer: `listBoards`/`createBoard`/
+  `renameBoard`/`deleteBoard` in `lib/queries/work.ts`; `listCards`/`createCard` now take an
+  optional/required `boardId` — `page.tsx`'s server-side KPI strip and `WorkCharts` still call
+  `listCards(supabase)` with no `boardId`, so those stay **aggregated across all boards** by
+  design (only the Kanban itself needed splitting). `workKeys.cards(boardId)` keys the cache per
+  board.
+
 **Pending manual actions:** apply migrations `0006_exercise_pins.sql`, `0009_journal_weeks.sql`,
-`0010_todos.sql`, `0011_session_set_plan_link.sql`, `0012_plan_progress.sql`, **and
-`0013_cardio.sql`** to Supabase (`supabase db push` / SQL editor). Until `0013` is applied, the
+`0010_todos.sql`, `0011_session_set_plan_link.sql`, `0012_plan_progress.sql`,
+`0013_cardio.sql`, **and `0014_work_boards.sql`** to Supabase (`supabase db push` / SQL editor).
+Until `0014` is applied, the Work page's Kanban will error on load (`roadmap_cards.board_id` /
+`work_boards` don't exist yet). Until `0013` is applied, the
 cardio logging page will error on save (tables don't exist yet). Until `0012` is applied, plan
 auto-progression degrades (the new `base_*` / `plan_updates` columns are missing, so queries error
 and no banner shows). Until `0010` is applied, the todo widget/review degrade gracefully (queries

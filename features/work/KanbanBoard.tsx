@@ -1,10 +1,14 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, GripVertical, ArrowRight } from 'lucide-react';
-import type { RoadmapCard, RoadmapStatus, Priority } from '@/lib/db/types';
+import { Plus, Pencil, Trash2, GripVertical, ArrowRight, Check, X } from 'lucide-react';
+import type { RoadmapCard, RoadmapStatus, Priority, WorkBoard } from '@/lib/db/types';
 import {
   workKeys,
+  listBoards,
+  createBoard,
+  renameBoard,
+  deleteBoard,
   listCards,
   createCard,
   updateCard,
@@ -18,6 +22,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { CardForm } from './CardForm';
 import { CardDetail } from './CardDetail';
+
+const SELECTED_BOARD_KEY = 'work-selected-board';
 
 const COLUMNS: { status: RoadmapStatus; label: string; color: string }[] = [
   { status: 'idea', label: 'Idea', color: 'bg-[var(--accent-soft)] text-[var(--muted)]' },
@@ -282,25 +288,196 @@ function KanbanColumn({
   );
 }
 
+interface BoardTabsProps {
+  boards: WorkBoard[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onCreate: (name: string) => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+  isCreating: boolean;
+}
+
+function BoardTabs({ boards, selectedId, onSelect, onCreate, onRename, onDelete, isCreating }: BoardTabsProps) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+
+  function submitNew(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    onCreate(newName.trim());
+    setNewName('');
+    setAdding(false);
+  }
+
+  function submitRename(e: React.FormEvent, id: string) {
+    e.preventDefault();
+    if (!editName.trim()) return;
+    onRename(id, editName.trim());
+    setEditingId(null);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {boards.map((board) => {
+        if (editingId === board.id) {
+          return (
+            <form key={board.id} onSubmit={(e) => submitRename(e, board.id)} className="flex items-center gap-1">
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-32 rounded-xl border border-accent/40 bg-card px-2.5 py-1.5 text-sm outline-none"
+              />
+              <button type="submit" aria-label="Save name" className="text-accent">
+                <Check className="h-4 w-4" />
+              </button>
+              <button type="button" aria-label="Cancel rename" onClick={() => setEditingId(null)} className="text-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </form>
+          );
+        }
+
+        const active = board.id === selectedId;
+        return (
+          <div
+            key={board.id}
+            className={`group flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${
+              active
+                ? 'bg-[var(--accent)] text-white'
+                : 'border border-border bg-card text-muted hover:border-accent/30 hover:text-foreground'
+            }`}
+          >
+            <button onClick={() => onSelect(board.id)}>{board.name}</button>
+            {active && (
+              <span className="ml-1 flex items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
+                <button
+                  aria-label="Rename board"
+                  onClick={() => { setEditingId(board.id); setEditName(board.name); }}
+                  className="rounded p-0.5 hover:bg-white/20"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+                {boards.length > 1 && (
+                  <button
+                    aria-label="Delete board"
+                    onClick={() => {
+                      if (window.confirm(`Delete "${board.name}" and all its cards? This can't be undone.`)) {
+                        onDelete(board.id);
+                      }
+                    }}
+                    className="rounded p-0.5 hover:bg-white/20"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
+        );
+      })}
+
+      {adding ? (
+        <form onSubmit={submitNew} className="flex items-center gap-1">
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Board name"
+            className="w-32 rounded-xl border border-accent/40 bg-card px-2.5 py-1.5 text-sm outline-none"
+          />
+          <button type="submit" aria-label="Create board" disabled={isCreating} className="text-accent">
+            <Check className="h-4 w-4" />
+          </button>
+          <button type="button" aria-label="Cancel new board" onClick={() => setAdding(false)} className="text-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </form>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="flex items-center gap-1 rounded-xl border border-dashed border-border px-3 py-1.5 text-sm text-muted transition-colors hover:border-accent/40 hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Board
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function KanbanBoard() {
   const supabase = createClient();
   const queryClient = useQueryClient();
 
-  const { data: cards = [], isLoading } = useQuery({
-    queryKey: workKeys.cards(),
-    queryFn: () => listCards(supabase),
+  const { data: boards = [], isLoading: boardsLoading } = useQuery({
+    queryKey: workKeys.boards(),
+    queryFn: () => listBoards(supabase),
+  });
+
+  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+
+  // Restore the last-selected board once boards have loaded; fall back to the first one.
+  useEffect(() => {
+    if (boards.length === 0) return;
+    setSelectedBoardId((current) => {
+      if (current && boards.some((b) => b.id === current)) return current;
+      const stored = localStorage.getItem(SELECTED_BOARD_KEY);
+      return stored && boards.some((b) => b.id === stored) ? stored : boards[0].id;
+    });
+  }, [boards]);
+
+  function selectBoard(id: string) {
+    setSelectedBoardId(id);
+    localStorage.setItem(SELECTED_BOARD_KEY, id);
+  }
+
+  const createBoardMutation = useMutation({
+    mutationFn: (name: string) => createBoard(supabase, name),
+    onSuccess: (board) => {
+      queryClient.setQueryData<WorkBoard[]>(workKeys.boards(), (prev) => (prev ? [...prev, board] : [board]));
+      selectBoard(board.id);
+    },
+  });
+
+  const renameBoardMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => renameBoard(supabase, id, name),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<WorkBoard[]>(workKeys.boards(), (prev) =>
+        prev ? prev.map((b) => (b.id === updated.id ? updated : b)) : [updated],
+      );
+    },
+  });
+
+  const deleteBoardMutation = useMutation({
+    mutationFn: (id: string) => deleteBoard(supabase, id),
+    onSuccess: (_void, id) => {
+      const remaining = (queryClient.getQueryData<WorkBoard[]>(workKeys.boards()) ?? []).filter((b) => b.id !== id);
+      queryClient.setQueryData<WorkBoard[]>(workKeys.boards(), remaining);
+      queryClient.removeQueries({ queryKey: workKeys.cards(id) });
+      if (selectedBoardId === id && remaining[0]) selectBoard(remaining[0].id);
+    },
+  });
+
+  const { data: cards = [], isLoading: cardsLoading } = useQuery({
+    queryKey: workKeys.cards(selectedBoardId ?? ''),
+    queryFn: () => listCards(supabase, selectedBoardId!),
+    enabled: !!selectedBoardId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: CardInput) => createCard(supabase, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: workKeys.cards() }),
+    mutationFn: (input: CardInput) => createCard(supabase, selectedBoardId!, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: workKeys.cards(selectedBoardId!) }),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<CardInput> }) =>
       updateCard(supabase, id, patch),
     onSuccess: (updated) => {
-      queryClient.setQueryData<RoadmapCard[]>(workKeys.cards(), (prev) =>
+      queryClient.setQueryData<RoadmapCard[]>(workKeys.cards(selectedBoardId!), (prev) =>
         prev ? prev.map((c) => (c.id === updated.id ? updated : c)) : [updated],
       );
     },
@@ -309,15 +486,15 @@ export function KanbanBoard() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCard(supabase, id),
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: workKeys.cards() });
-      const prev = queryClient.getQueryData<RoadmapCard[]>(workKeys.cards());
-      queryClient.setQueryData<RoadmapCard[]>(workKeys.cards(), (old) =>
+      await queryClient.cancelQueries({ queryKey: workKeys.cards(selectedBoardId!) });
+      const prev = queryClient.getQueryData<RoadmapCard[]>(workKeys.cards(selectedBoardId!));
+      queryClient.setQueryData<RoadmapCard[]>(workKeys.cards(selectedBoardId!), (old) =>
         (old ?? []).filter((c) => c.id !== id),
       );
       return { prev };
     },
     onError: (_err, _id, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(workKeys.cards(), ctx.prev);
+      if (ctx?.prev) queryClient.setQueryData(workKeys.cards(selectedBoardId!), ctx.prev);
     },
   });
 
@@ -327,21 +504,22 @@ export function KanbanBoard() {
   });
 
   function handleReorder(status: RoadmapStatus, orderedIds: string[]) {
+    const boardId = selectedBoardId!;
     const updates = orderedIds.map((id, position) => ({ id, position }));
 
     // Optimistic update
-    queryClient.setQueryData<RoadmapCard[]>(workKeys.cards(), (prev) => {
+    queryClient.setQueryData<RoadmapCard[]>(workKeys.cards(boardId), (prev) => {
       if (!prev) return prev;
       const posMap = new Map(updates.map(({ id, position }) => [id, position]));
       return prev.map((c) => (posMap.has(c.id) ? { ...c, position: posMap.get(c.id)! } : c));
     });
 
     reorderMutation.mutate(updates, {
-      onError: () => queryClient.invalidateQueries({ queryKey: workKeys.cards() }),
+      onError: () => queryClient.invalidateQueries({ queryKey: workKeys.cards(boardId) }),
     });
   }
 
-  if (isLoading) {
+  if (boardsLoading || !selectedBoardId) {
     return (
       <div className="flex items-center justify-center py-16">
         <Spinner />
@@ -350,28 +528,46 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="stagger-fade flex gap-3 overflow-x-auto pb-4">
-      {COLUMNS.map(({ status, label, color }) => {
-        const columnCards = cards
-          .filter((c) => c.status === status)
-          .sort(comparePriority);
+    <div className="space-y-3">
+      <BoardTabs
+        boards={boards}
+        selectedId={selectedBoardId}
+        onSelect={selectBoard}
+        onCreate={(name) => createBoardMutation.mutate(name)}
+        onRename={(id, name) => renameBoardMutation.mutate({ id, name })}
+        onDelete={(id) => deleteBoardMutation.mutate(id)}
+        isCreating={createBoardMutation.isPending}
+      />
 
-        return (
-          <KanbanColumn
-            key={status}
-            status={status}
-            label={label}
-            color={color}
-            cards={columnCards}
-            onCreateCard={(input) => createMutation.mutate({ ...input, status })}
-            onUpdateCard={(id, patch) => updateMutation.mutate({ id, patch })}
-            onDeleteCard={(id) => deleteMutation.mutate(id)}
-            onReorder={handleReorder}
-            onAdvanceCard={(id, nextStatus) => updateMutation.mutate({ id, patch: { status: nextStatus } })}
-            isCreating={createMutation.isPending}
-          />
-        );
-      })}
+      {cardsLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Spinner />
+        </div>
+      ) : (
+        <div className="stagger-fade flex gap-3 overflow-x-auto pb-4">
+          {COLUMNS.map(({ status, label, color }) => {
+            const columnCards = cards
+              .filter((c) => c.status === status)
+              .sort(comparePriority);
+
+            return (
+              <KanbanColumn
+                key={`${selectedBoardId}-${status}`}
+                status={status}
+                label={label}
+                color={color}
+                cards={columnCards}
+                onCreateCard={(input) => createMutation.mutate({ ...input, status })}
+                onUpdateCard={(id, patch) => updateMutation.mutate({ id, patch })}
+                onDeleteCard={(id) => deleteMutation.mutate(id)}
+                onReorder={handleReorder}
+                onAdvanceCard={(id, nextStatus) => updateMutation.mutate({ id, patch: { status: nextStatus } })}
+                isCreating={createMutation.isPending}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

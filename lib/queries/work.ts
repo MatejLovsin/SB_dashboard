@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, RoadmapCard, Note, WorkMetric, RoadmapStatus, Priority } from '@/lib/db/types';
+import type { Database, RoadmapCard, WorkBoard, Note, WorkMetric, RoadmapStatus, Priority } from '@/lib/db/types';
 import type { BarPoint } from '@/components/charts/BarCluster';
 import type { DonutSlice } from '@/components/charts/DonutStat';
 import type { AreaTrendPoint } from '@/components/charts/AreaTrend';
@@ -9,7 +9,8 @@ type Client = SupabaseClient<Database>;
 
 export const workKeys = {
   all: ['work'] as const,
-  cards: () => [...workKeys.all, 'cards'] as const,
+  boards: () => [...workKeys.all, 'boards'] as const,
+  cards: (boardId: string) => [...workKeys.all, 'cards', boardId] as const,
   notes: (search?: string) => [...workKeys.all, 'notes', search ?? ''] as const,
   metrics: () => [...workKeys.all, 'metrics'] as const,
 };
@@ -27,14 +28,56 @@ export type NoteInput = {
   entry_date?: string;
 };
 
+// --- Work boards ---
+
+export async function listBoards(client: Client): Promise<WorkBoard[]> {
+  const { data, error } = await client
+    .from('work_boards')
+    .select('*')
+    .order('position');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createBoard(client: Client, name: string): Promise<WorkBoard> {
+  const { data: existing } = await client
+    .from('work_boards')
+    .select('position')
+    .order('position', { ascending: false })
+    .limit(1);
+  const maxPos = existing?.[0]?.position ?? -1;
+
+  const { data, error } = await client
+    .from('work_boards')
+    .insert({ name: name.trim(), position: maxPos + 1 })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function renameBoard(client: Client, id: string, name: string): Promise<WorkBoard> {
+  const { data, error } = await client
+    .from('work_boards')
+    .update({ name: name.trim() })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBoard(client: Client, id: string): Promise<void> {
+  const { error } = await client.from('work_boards').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // --- Roadmap cards ---
 
-export async function listCards(client: Client): Promise<RoadmapCard[]> {
-  const { data, error } = await client
-    .from('roadmap_cards')
-    .select('*')
-    .order('status')
-    .order('position');
+export async function listCards(client: Client, boardId?: string): Promise<RoadmapCard[]> {
+  let q = client.from('roadmap_cards').select('*');
+  if (boardId) q = q.eq('board_id', boardId);
+  const { data, error } = await q.order('status').order('position');
   if (error) throw error;
 
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -46,10 +89,11 @@ export async function listCards(client: Client): Promise<RoadmapCard[]> {
   });
 }
 
-export async function createCard(client: Client, input: CardInput): Promise<RoadmapCard> {
+export async function createCard(client: Client, boardId: string, input: CardInput): Promise<RoadmapCard> {
   const { data: existing } = await client
     .from('roadmap_cards')
     .select('position')
+    .eq('board_id', boardId)
     .eq('status', input.status ?? 'idea')
     .order('position', { ascending: false })
     .limit(1);
@@ -58,6 +102,7 @@ export async function createCard(client: Client, input: CardInput): Promise<Road
   const { data, error } = await client
     .from('roadmap_cards')
     .insert({
+      board_id: boardId,
       title: input.title.trim(),
       description: input.description?.trim() ?? null,
       status: input.status ?? 'idea',

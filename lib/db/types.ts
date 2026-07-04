@@ -80,9 +80,15 @@ export interface Database {
         Relationships: [];
       };
       roadmap_cards: {
-        Row: { id: string; user_id: string; title: string; description: string | null; status: RoadmapStatus; priority: Priority | null; position: number; done_at: string | null; updated_at: string } & Timestamps;
-        Insert: { id?: string; user_id?: string; title: string; description?: string | null; status?: RoadmapStatus; priority?: Priority | null; position?: number; done_at?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; board_id: string; title: string; description: string | null; status: RoadmapStatus; priority: Priority | null; position: number; done_at: string | null; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; board_id: string; title: string; description?: string | null; status?: RoadmapStatus; priority?: Priority | null; position?: number; done_at?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['roadmap_cards']['Insert']>;
+        Relationships: [];
+      };
+      work_boards: {
+        Row: { id: string; user_id: string; name: string; position: number; created_at: string };
+        Insert: { id?: string; user_id?: string; name: string; position?: number; created_at?: string };
+        Update: Partial<Database['public']['Tables']['work_boards']['Insert']>;
         Relationships: [];
       };
       notes: {
@@ -165,6 +171,7 @@ export type Exam = Tables<'exams'>;
 export type StudySession = Tables<'study_sessions'>;
 export type DiscardedStudySession = Tables<'discarded_study_sessions'>;
 export type RoadmapCard = Tables<'roadmap_cards'>;
+export type WorkBoard = Tables<'work_boards'>;
 export type Note = Tables<'notes'>;
 export type WorkMetric = Tables<'work_metrics'>;
 export type AiSummary = Tables<'ai_summaries'>;

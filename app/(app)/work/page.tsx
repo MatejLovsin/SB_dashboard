@@ -14,10 +14,9 @@ import { getSummary } from '@/lib/queries/ai';
 import { SummaryCard } from '@/components/ai/SummaryCard';
 import {
   listCards,
+  listBoards,
   listNotes,
   listWorkMetrics,
-  cardsByStatus,
-  cardsByPriority,
   notesPerWeek,
   focusScoreSeries,
 } from '@/lib/queries/work';
@@ -25,15 +24,14 @@ import {
 export default async function WorkPage() {
   const supabase = await createClient();
 
-  const [summary, cards, notes, metrics] = await Promise.all([
+  const [summary, cards, boards, notes, metrics] = await Promise.all([
     getSummary(supabase, 'work').catch(() => null),
     listCards(supabase),
+    listBoards(supabase),
     listNotes(supabase),
     listWorkMetrics(supabase),
   ]);
 
-  const byStatus = cardsByStatus(cards);
-  const byPriority = cardsByPriority(cards);
   const weeklyNotes = notesPerWeek(notes);
   const focusSeries = focusScoreSeries(metrics);
 
@@ -109,9 +107,8 @@ export default async function WorkPage() {
       <section>
         <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-muted">Analytics</h2>
         <WorkCharts
-          cardsByStatus={byStatus}
-          totalCards={totalCards}
-          cardsByPriority={byPriority}
+          cards={cards}
+          boards={boards}
           notesPerWeek={weeklyNotes}
           focusScoreSeries={focusSeries}
         />

@@ -77,7 +77,7 @@ export function BodyweightLogger({ initialPoints }: Props) {
         <button
           type="submit"
           disabled={saving || !weight}
-          className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
         >
           {saving ? '…' : 'Log'}
         </button>

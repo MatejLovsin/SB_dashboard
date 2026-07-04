@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { SideNav } from './SideNav';
 import { BottomNav } from './BottomNav';
@@ -12,6 +13,13 @@ import { sectionTheme } from './nav-items';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const theme = sectionTheme(pathname);
+
+  // Also mirror the theme onto <html> so portaled overlays (FocusOverlay
+  // renders into document.body, outside this wrapper) still pick up the
+  // section's accent/chart colors instead of falling back to the default.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
     <div className="flex h-dvh overflow-hidden" data-theme={theme}>

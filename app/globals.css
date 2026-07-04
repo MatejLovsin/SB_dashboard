@@ -195,22 +195,27 @@ body {
   animation: press-flash 0.4s var(--ease-out-quint);
 }
 
-/* App-native scrollbar for textareas — thin, rounded, matches the navy palette. */
-textarea {
+/* App-native scrollbar — thin, rounded, matches the navy palette. */
+textarea,
+.styled-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
-textarea::-webkit-scrollbar {
+textarea::-webkit-scrollbar,
+.styled-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
-textarea::-webkit-scrollbar-track {
+textarea::-webkit-scrollbar-track,
+.styled-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-textarea::-webkit-scrollbar-thumb {
+textarea::-webkit-scrollbar-thumb,
+.styled-scrollbar::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 9999px;
 }
-textarea::-webkit-scrollbar-thumb:hover {
+textarea::-webkit-scrollbar-thumb:hover,
+.styled-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
 

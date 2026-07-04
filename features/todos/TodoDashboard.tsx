@@ -78,7 +78,7 @@ export function TodoDashboard() {
               Nothing planned for today — plan tomorrow&apos;s list.
             </p>
           ) : (
-            <div className="max-h-64 overflow-y-auto space-y-0.5 pr-1">
+            <div className="styled-scrollbar max-h-64 overflow-y-auto space-y-0.5 pr-1">
               {todos.map((todo) => (
                 <button
                   key={todo.id}

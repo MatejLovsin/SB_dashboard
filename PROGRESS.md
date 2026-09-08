@@ -22,6 +22,12 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 
 No active redesign tasks. Next work: new features or content updates.
 
+**Open question (weekly programme):** the seeded split follows `full_programme_updated.svg`
+literally, where the light days are asymmetric — **DB incl** and **Pullup** are light on *both*
+Legs and Lower, while **Dips** and **Row** are light only on Upper. Unconfirmed whether that's
+intentional or a slip in the source diagram (Lower may have been meant to mirror Upper). Fixable
+without a migration: toggle the chips at `/fitness/programme`.
+
 ### Fitness features shipped (patterns logged in DESIGN_GUIDE → Approved feature patterns)
 - [x] **Exercise library** — `/fitness/history` (component `ExerciseLibrary`) replaces the old
   search-only "Exercise history". Browse mode lists **every** exercise in a responsive grid
@@ -141,9 +147,60 @@ No active redesign tasks. Next work: new features or content updates.
   design (only the Kanban itself needed splitting). `workKeys.cards(boardId)` keys the cache per
   board.
 
+- [x] **Weekly programme strip** — the training split pinned to the **top of `/fitness`**, directly
+  under `PageHeader` and above the AI summary. Source of truth: `full_programme_updated.svg`
+  (kept in the repo root as the design reference). Table `programme_days` (migration
+  `0015_programme.sql`) holds **exactly 7 rows per user**, one per ISO weekday (`1`=Mon … `7`=Sun,
+  `unique (user_id, weekday)`); a null `label` means **rest day**. That fixed-7 shape makes "what
+  am I training today?" a single weekday lookup with no cycle math, and means add/remove/reorder
+  never inserts or deletes rows — it only rewrites `(label, plan_id, items)` in place.
+  Seeded split: **Mon Push · Tue Pull · Wed Legs · Thu Rest · Fri Upper · Sat Lower · Sun Rest**.
+  - `items` is a jsonb `[{ name, emphasis: 'heavy'|'light'|null }]` shorthand chip list, kept
+    **decoupled from `plan_id`** on purpose: the strip needs terse labels ("DB incl") that stay
+    stable when the linked plan changes, and heavy/light emphasis has no equivalent in the plan
+    schema. Four main lifts (DB incl, Dips, Pullup, Row) are heavy on Push/Pull, light on
+    Legs/Upper/Lower.
+  - `lib/queries/programme.ts`: `programmeKeys`, `isoWeekday`/`weekdayLabel`/`weekdayFull`,
+    `listProgrammeDays` (backfills missing weekdays in memory so the strip never renders a ragged
+    week), `upsertProgrammeDay` (upserts on `user_id,weekday` so an unseeded day still saves),
+    `swapProgrammeDays`.
+  - `features/fitness/WeekProgramme.tsx` — mobile = snap-scroll row (`basis-[44%]`, today
+    auto-scrolled into view); `lg` = `grid-cols-7`. **Today is resolved in a `useEffect`, not on
+    the server** — Vercel runs UTC and would mis-highlight the day around midnight; deferring to
+    the client also avoids a hydration mismatch. Tapping a training day → `/fitness/plans/[id]`
+    (or the editor if no plan is linked yet); rest days aren't destinations.
+  - `features/fitness/ProgrammeEditor.tsx` at `/fitness/programme` — renders the real
+    `WeekProgramme` as a **live preview**, then a card per weekday: rename (empty = rest), link a
+    plan via `<select>` over `listPlans`, add/rename/remove exercise chips, cycle emphasis
+    (—→heavy→light→—), and up/down arrows that **swap contents with the neighbouring weekday**.
+    Local state is the render source of truth (so inputs stay responsive); writes fire on commit
+    events (blur/change/click) and `router.refresh()` on success because the hub is an RSC.
+  - **Plan link (the day → split connection).** `programme_days.plan_id` is a real FK to
+    `workout_plans (id) on delete set null` — deleting a plan blanks the link instead of breaking
+    the strip. `listProgrammeDays` resolves the linked plan's **name** in a second round-trip
+    (not an embedded join, so a stale reference can't fail the whole strip) and returns
+    `ProgrammeDayWithPlan`; each day card shows that name in a footer row, or a `Link a plan`
+    prompt in accent when unlinked. Migration `0016_programme_plan_autolink.sql` pre-fills the
+    links by matching the day label against existing plans (exact name → category → `"Push A"`
+    prefix, newest wins), guarded by `plan_id is null` so it's re-runnable and never overwrites a
+    manual pick.
+  - **Full loop:** tap a day → `/fitness/plans/[id]` → **Start workout** button (added to
+    `PlanEditor`'s header) → `/fitness/log?plan=<id>`, where `SessionRunner` reads the search param
+    and auto-fires `startSessionFromPlan` (ref-guarded against Strict Mode's double effect, spinner
+    instead of flashing the plan picker, falls through to the picker on error). `app/(app)/fitness/
+    log/page.tsx` now wraps `SessionRunner` in `<Suspense>` because of `useSearchParams`.
+  - New global tokens `--load-heavy`/`--load-light` (+ `-soft` fills) in `globals.css`. Like
+    `--up`/`--down` these are **semantic data colors, not decorative chrome**, so they sit outside
+    the blue budget and stay constant across section themes (fitness is red, so heavy could not
+    just reuse `--accent`).
+
+**Applied (2026-09-08):** `0015_programme.sql` and `0016_programme_plan_autolink.sql` are live in
+Supabase. `0016` is re-runnable — execute it again after adding new plans to link any programme
+day still showing "Link a plan".
+
 **Pending manual actions:** apply migrations `0006_exercise_pins.sql`, `0009_journal_weeks.sql`,
 `0010_todos.sql`, `0011_session_set_plan_link.sql`, `0012_plan_progress.sql`,
-`0013_cardio.sql`, **and `0014_work_boards.sql`** to Supabase (`supabase db push` / SQL editor).
+`0013_cardio.sql`, and `0014_work_boards.sql` to Supabase (`supabase db push` / SQL editor).
 Until `0014` is applied, the Work page's Kanban will error on load (`roadmap_cards.board_id` /
 `work_boards` don't exist yet). Until `0013` is applied, the
 cardio logging page will error on save (tables don't exist yet). Until `0012` is applied, plan

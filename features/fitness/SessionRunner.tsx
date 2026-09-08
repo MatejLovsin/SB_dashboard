@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Dumbbell, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -25,6 +25,7 @@ function todayISO(): string {
 export function SessionRunner() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [date, setDate] = useState(todayISO());
@@ -53,6 +54,19 @@ export function SessionRunner() {
     enabled: sessionId === null,
   });
 
+  // `/fitness/log?plan=<id>` starts that plan straight away — the "Start workout"
+  // button on a plan page (reached by tapping a day in the weekly programme) sends
+  // you here, and stopping at the plan picker again would be a pointless extra tap.
+  // The ref guards against Strict Mode's double-effect creating two sessions.
+  const autoStarted = useRef(false);
+  const autoStartPlanId = searchParams.get('plan');
+  useEffect(() => {
+    if (!autoStartPlanId || autoStarted.current || sessionId) return;
+    autoStarted.current = true;
+    fromPlanMutation.mutate(autoStartPlanId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartPlanId, sessionId]);
+
   if (sessionId) {
     // Finishing/discarding returns to the fitness home.
     return <ActiveSession sessionId={sessionId} onFinish={() => router.push('/fitness')} />;
@@ -60,6 +74,16 @@ export function SessionRunner() {
 
   const starting = fromPlanMutation.isPending || emptyMutation.isPending;
   const startError = fromPlanMutation.error ?? emptyMutation.error;
+
+  // Auto-starting: show a spinner instead of flashing the plan picker. If the start
+  // fails we fall through to the picker below, which surfaces `startError`.
+  if (autoStartPlanId && !startError) {
+    return (
+      <div className="flex items-center gap-2 py-8 text-sm text-muted">
+        <Spinner /> Starting workout…
+      </div>
+    );
+  }
 
   return (
     <div>

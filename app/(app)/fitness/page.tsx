@@ -11,7 +11,9 @@ import { SummaryCard } from '@/components/ai/SummaryCard';
 import { FitnessOverviewPreview } from '@/features/fitness/FitnessOverviewPreview';
 import { PlanListPreview } from '@/features/fitness/PlanListPreview';
 import { PinnedLifts } from '@/features/fitness/PinnedLifts';
+import { WeekProgramme } from '@/features/fitness/WeekProgramme';
 import { getPinnedLiftTrends, getFitnessHubMetrics } from '@/lib/queries/analytics';
+import { listProgrammeDays } from '@/lib/queries/programme';
 
 async function getRecentExerciseNames(count = 5): Promise<string[]> {
   const supabase = await createClient();
@@ -45,11 +47,13 @@ async function getRecentExerciseNames(count = 5): Promise<string[]> {
 
 export default async function FitnessPage() {
   const supabase = await createClient();
-  const [summary, recentExercises, pinnedLifts, hubMetrics] = await Promise.all([
+  const [summary, recentExercises, pinnedLifts, hubMetrics, programmeDays] = await Promise.all([
     getSummary(supabase, 'fitness').catch(() => null),
     getRecentExerciseNames(),
     getPinnedLiftTrends(supabase).catch(() => []),
     getFitnessHubMetrics(supabase).catch(() => null),
+    // Degrades to nothing if migration 0015 hasn't been applied yet.
+    listProgrammeDays(supabase).catch(() => []),
   ]);
 
   const bestE1rm = pinnedLifts.length > 0
@@ -59,6 +63,8 @@ export default async function FitnessPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Fitness" description="Push / Pull / Legs — strength focus." />
+
+      {programmeDays.length > 0 && <WeekProgramme days={programmeDays} />}
 
       <SummaryCard section="fitness" initial={summary} />
 

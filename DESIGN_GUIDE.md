@@ -120,6 +120,27 @@ reads a server `getJournalHomeState` — deliberately **not** in the SideNav.
 **Applies to:** any periodic-log feature (monthly retros, habit check-ins). Swap the period unit
 and the table; the open/closed + month-section pattern carries over.
 
+### Weekday strip (schedule pinned to a hub)
+**What:** a 7-column strip at the top of a hub showing the week at a glance, with **today**
+accent-highlighted and each day linking to its configured destination. Paired with a dedicated
+editor route that renders the strip itself as a live preview.
+**Reuse:** `features/fitness/WeekProgramme.tsx` + `features/fitness/ProgrammeEditor.tsx`
+(`/fitness/programme`) · `lib/queries/programme.ts`. Layout: mobile snap-scroll
+(`flex snap-x overflow-x-auto`, children `shrink-0 basis-[44%] sm:basis-[26%]`) → `lg:grid
+lg:grid-cols-7`; today auto-scrolled into view on mount.
+**Two rules worth copying:**
+1. **Resolve "today" on the client, in a `useEffect`** — never on the server. Vercel runs UTC, so
+   a server-computed weekday mis-highlights around midnight; deferring also avoids a hydration
+   mismatch. Highlight appears one frame after hydration, which is imperceptible.
+2. **Fixed row-per-slot schema** (7 rows, `unique (user_id, weekday)`, null label = empty slot).
+   Add/remove/reorder then never insert or delete — they rewrite contents in place, and reorder is
+   a two-row content swap. No `position` column, no gap-repair logic.
+**Semantic color:** `--load-heavy` / `--load-light` (+ `-soft` fills) are **data encoding, not
+chrome** — like `--up`/`--down` they're defined once on `:root` and stay constant across section
+themes. When a section's own `--accent` already occupies the hue you need to encode (fitness is
+red, and "heavy" is red), define a global semantic token rather than reusing the accent.
+**Applies to:** School (a weekly lecture/exam timetable), Work (a weekly focus rotation).
+
 ---
 
 ### Blue budget (Plan 01)

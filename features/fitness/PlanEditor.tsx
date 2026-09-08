@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Play } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { fitnessKeys, type PlanExerciseLine, type PlanWithExercises } from '@/lib/queries/fitness';
 import {
@@ -20,6 +20,7 @@ import {
 } from '@/lib/queries/plans';
 import type { Exercise } from '@/lib/db/types';
 import { Card, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PlanForm } from './PlanForm';
@@ -157,9 +158,18 @@ export function PlanEditor({ planId }: { planId: string }) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <BackLink />
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">{plan.name}</h1>
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <BackLink />
+          <h1 className="mt-2 truncate text-2xl font-bold tracking-tight">{plan.name}</h1>
+        </div>
+        {/* Closes the loop from the weekly programme: tap a day → land here → train. */}
+        <Link href={`/fitness/log?plan=${plan.id}`} className="shrink-0">
+          <Button>
+            <Play className="h-4 w-4" />
+            Start workout
+          </Button>
+        </Link>
       </div>
 
       <Card>

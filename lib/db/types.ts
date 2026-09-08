@@ -14,6 +14,11 @@ export type PlanTargetChange = {
   to: { weight: number | null; reps: number | null };
 };
 
+// One shorthand exercise chip on a weekly-programme day. `emphasis` encodes the
+// four main lifts: heavy = near-failure, light = technique/volume, null = accessory.
+export type ProgrammeEmphasis = 'heavy' | 'light';
+export type ProgrammeItem = { name: string; emphasis: ProgrammeEmphasis | null };
+
 type Timestamps = { created_at: string };
 
 export interface Database {
@@ -29,6 +34,12 @@ export interface Database {
         Row: { id: string; user_id: string; name: string; category: string | null; notes: string | null; updated_at: string } & Timestamps;
         Insert: { id?: string; user_id?: string; name: string; category?: string | null; notes?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['workout_plans']['Insert']>;
+        Relationships: [];
+      };
+      programme_days: {
+        Row: { id: string; user_id: string; weekday: number; label: string | null; plan_id: string | null; items: ProgrammeItem[]; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; weekday: number; label?: string | null; plan_id?: string | null; items?: ProgrammeItem[]; created_at?: string; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['programme_days']['Insert']>;
         Relationships: [];
       };
       plan_exercises: {
@@ -162,6 +173,7 @@ export type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row'];
 export type Exercise = Tables<'exercises'>;
 export type WorkoutPlan = Tables<'workout_plans'>;
+export type ProgrammeDay = Tables<'programme_days'>;
 export type PlanExercise = Tables<'plan_exercises'>;
 export type PlanSet = Tables<'plan_sets'>;
 export type WorkoutSession = Tables<'workout_sessions'>;

@@ -41,6 +41,14 @@
   /* semantic deltas — used sparingly, only for +/- badges; constant across themes */
   --up: #4ade80;
   --down: #f87171;
+
+  /* Training load encoding for the weekly programme's main lifts. Like --up/--down
+   * these are SEMANTIC data colors, not decorative chrome, so they sit outside the
+   * blue budget and stay constant across section themes. */
+  --load-heavy: #f87171;
+  --load-heavy-soft: rgba(248, 113, 113, 0.14);
+  --load-light: #60a5fa;
+  --load-light-soft: rgba(96, 165, 250, 0.14);
 }
 
 /* Fitness — red. */

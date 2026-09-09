@@ -10,6 +10,63 @@ implementation — when in doubt, match it.
 
 ---
 
+## 0. The design language — "lit instrument" (2026-09-09)
+
+The grey card is gone. Three rules, and everything in this guide is downstream of them.
+
+**A. No containers.** Nothing is filled, bordered or shadowed. Structure comes from a
+hairline rule at the top of a block and the space around it. `.panel` still exists and is
+still what `<Card>` applies — it just draws a single top rule now instead of a card. Never
+re-introduce a fill to group things; use space, a rule, or a `.label` caption.
+`--card` / `--card-2` survive only as near-invisible washes for icon badges and chips.
+
+**B. Light is a source, not a decoration.** One fixed lamp hangs above the content column
+(`.section-glow`, colored by the section accent). Every top-level section of a page declares
+its distance from it as `--depth` (0 = under the lamp → 1 = far from it), and `--foreground`,
+`--muted` and `--border` are *computed* from that distance. Bands near the light are brighter;
+bands far from it fall away. Two dials:
+
+| Token | Value | Where |
+|---|---|---|
+| `--glow-strength` | `.70` | hub pages (`/`, `/fitness`, `/school`, `/work`) |
+| `--glow-strength` | `.40` | every subpage — set by `AppShell` via `data-scope='sub'` |
+| `--light-response` | `.75` | everywhere; how hard ink and rules fall off with depth |
+| `--scroll-fade` | `1` → `.2` | written per frame by `AppShell` as you scroll a page |
+
+The lamp is fixed to the viewport, so it would otherwise ride along at full strength forever.
+`--scroll-fade` runs linearly from **1 at the top of a page to 0.2 at the bottom** and is
+multiplied into the glow's opacity. A page too short to scroll stays fully lit. This is scroll
+position only — it does **not** touch `--depth`, so a band's ink and rules stay put as you move.
+
+`AppShell` wraps each page in `.page-lit`, which assigns depth to the page root's children by
+position — so **the order of sections on a page is now a visual decision**, not just a layout
+one. Put the thing that deserves the light first. If a section needs a depth out of sequence,
+give it `class="band"` and set `--depth` inline; `.band` re-declares the derived tokens (a
+plain inline `--depth` will *not* re-light on its own — see the note in `globals.css`).
+
+At most one number per screen may take `.emissive` (the lead metric, via `<StatTile lead />`).
+
+**C. Industrial type.** Three faces, one role each — use the class, never a raw family:
+
+| Role | Class / utility | Face |
+|---|---|---|
+| Page + panel + action titles, all numbers | `.display`, `.nums` (`h1`/`h2` get it free) | **Martian Mono** 700, `-0.045em` |
+| Micro-labels, units, meta, column heads | `.label` (uppercase, `.16em`) | **Spline Sans Mono** |
+| Body / UI text | default | **Archivo** |
+| ⚑ Long-form reading | `.longform` / `font-longform` | **reserved — resolves to Archivo today** |
+
+Martian Mono is wide. The negative tracking is not optional, and long titles need checking at
+phone width before they ship.
+
+> ⚑ **The long-form token is deliberately unused.** `--type-longform` is declared and wired
+> through Tailwind but currently resolves to the body face. A later session walks the app and
+> tags the places that are genuinely read rather than scanned — journal entries, exercise and
+> session notes, school notes — with `.longform`. Tagging something early is harmless; when we
+> pick the reading face, it's a one-line change in `globals.css` and every tagged surface
+> switches at once. Do not pick that face ad-hoc in a component.
+
+---
+
 ## 1. Cards / "squares" — clickability, hover, cursor
 
 Every card that represents a destination MUST read as interactive and behave identically
@@ -25,7 +82,8 @@ Use when the card body has **no** nested links/buttons.
 </Link>
 ```
 - The entire square is clickable.
-- `panel-hover` gives the border/background highlight on hover + press scale.
+- `panel-hover` gives the affordance: a faint white wash plus a brightened top rule. With no
+  card to highlight this is the *only* thing telling you a block is tappable — never omit it.
 - The `<Link>` (`<a>`) supplies the pointer cursor natively.
 - The inner title is a plain `<div>`, **not** another `<Link>`.
 
@@ -57,11 +115,17 @@ should be missing a pointer cursor.
 
 ## 3. Tokens & utilities (don't hardcode)
 
-- Surfaces: `panel` (via `<Card>`), hover via `panel-hover`.
-- Accent: `bg-accent` / `text-accent`; soft accent fill via `style={{ background: 'var(--accent-soft)' }}`.
-- Muted text: `text-muted`. Borders: `border-border`. Page bg: `bg-background`.
+- Surfaces: `panel` (via `<Card>`) = one top rule, no fill. Hover via `panel-hover`.
+- Type: `.display` / `.nums` / `.label` / `.longform` — see §0C. Never set a font family directly.
+- Ink + rules: `text-foreground`, `text-muted`, `border-border`. These are light-responsive —
+  their value depends on the band's `--depth`, so **don't replace them with a literal white/grey**
+  or that element stops responding to the light.
+- Accent: `bg-accent` / `text-accent`; soft fills via `var(--accent-soft)`. `--accent-rgb` is the
+  raw triplet for building rgba() stops (the glow and `.emissive` need it) — keep it in sync.
 - Icon badge: rounded-xl square, `h-10 w-10` (tile) or smaller inline, accent-soft bg.
 - Affordance chevron: `<ChevronRight className="h-4 w-4 text-muted" />` (or `text-white/80` on accent).
+- Page bg: `bg-background`. Chrome (`--surface`) is now within a hair of the page — the sidebar
+  and top bar are separated by their rule, not by being a different grey.
 
 ## 4. Spacing & rhythm
 

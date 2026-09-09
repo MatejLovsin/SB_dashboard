@@ -1,15 +1,26 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Archivo, Martian_Mono, Spline_Sans_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+// Type system — see the DESIGN LANGUAGE block in app/globals.css.
+// Display + every number (wide, industrial, tabular by nature).
+const martianMono = Martian_Mono({
+  variable: '--font-martian',
   subsets: ['latin'],
+  weight: ['400', '500', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+// Micro-labels, units, meta lines.
+const splineMono = Spline_Sans_Mono({
+  variable: '--font-spline',
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+});
+
+// Body / UI text. Also the current fallback for `--type-longform`.
+const archivo = Archivo({
+  variable: '--font-archivo',
   subsets: ['latin'],
 });
 
@@ -38,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${martianMono.variable} ${splineMono.variable} ${archivo.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
         <Providers>{children}</Providers>

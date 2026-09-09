@@ -6,17 +6,45 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 
 ## ▶ NEXT STEP
 
-**All redesign plans complete and deleted.** `redesign-plans/` folder removed.
+**Design language replaced (2026-09-09) — "lit instrument".** The grey-card era is over.
+Full spec in `DESIGN_GUIDE.md` §0; the token layer is `app/globals.css`.
 
-**Full visual redesign pipeline DONE:**
-- R1–R6: dark analytics aesthetic (foundation, fitness, home, school, work, polish)
-- Plan 01: slim persistent sidebar (`w-52 h-dvh`), wider content (`max-w-6xl`), blue diet (neutral hovers)
-- Plan 02: density + motion system — bento instrument panels, CountUp KPIs, ChartReveal hero charts, chartAnim bars/areas, press-flash feedback, accent bar in SideNav
-- Plan 03: per-section color themes (Home=indigo, Fitness=red, School=teal, Work=graphite)
-  via `[data-theme]` blocks in `globals.css` + `AppShell` wiring off the route; shared
-  neutral chrome repainted from navy-tinted to true neutral so it stops clashing with
-  section accents; one ambient `.section-glow` wash pinned to the top of the viewport
-  (auto-colored per theme) — a second per-element hero glow was tried and removed.
+What changed, and why it propagates without touching pages:
+- **No containers.** `.panel` now draws a hairline top rule and nothing else — no fill, no
+  border box, no shadow. Every existing `<Card>` converted for free.
+- **Light is a source.** One fixed lamp above the content column. `AppShell` wraps pages in
+  `.page-lit`, which assigns `--depth` to the page root's children by position; `--foreground`,
+  `--muted` and `--border` are computed from that depth, so every `text-muted` /
+  `border-border` utility already in the app became light-responsive with no component edits.
+  Dials: `--glow-strength` **.70** on hubs / **.40** on subpages (`data-scope`, off the route
+  depth), `--light-response` **.75** everywhere. These are the values chosen from the mockups.
+- **The lamp dims as you scroll** (added right after the token pass): `--scroll-fade` goes
+  linearly from 1 at the top of a page to **0.2** at the bottom, written per frame by `AppShell`
+  straight to the DOM (no React state, rAF-coalesced, passive listener) and multiplied into the
+  glow's opacity. Driven off the `<main>` scroll container, not the window. A ResizeObserver
+  re-reads when a page grows after mount, and a next-frame recheck covers Next's scroll reset on
+  navigation. Floor lives in `SCROLL_FADE_FLOOR` in `AppShell.tsx`.
+- **Type:** Martian Mono (display + all numbers, `-0.045em`), Spline Sans Mono (labels),
+  Archivo (body). Geist is gone from `layout.tsx`.
+- Touched: `globals.css`, `layout.tsx`, `AppShell`, `Card`, `StatTile` (adds `lead` for the one
+  `.emissive` metric per screen), `PageHeader` (adds optional `eyebrow`), `SideNav`, `TopBar`.
+- Verified: `npx tsc --noEmit` clean, `npm run build` clean, and the depth chain measured live
+  in the browser (ink .957 → .835, rules .11 → .06 top to bottom of a page).
+
+**⚑ Open task — the long-form typography pass.** `--type-longform` + `.longform` /
+`font-longform` are declared and wired through Tailwind but **deliberately resolve to Archivo
+today, and nothing is tagged yet**. Next session: walk the app and tag what is genuinely *read*
+rather than scanned — journal entries, exercise notes, session notes, school notes, work notes —
+then pick the reading face. One line in `globals.css` switches all tagged surfaces at once.
+
+**Not yet done (per-page work, needs eyes on the real screens):**
+- Section *order* is now a visual decision (first section gets the light). No page has been
+  re-ordered for it.
+- The solid `bg-accent` action cards (e.g. "Start workout" on `/fitness`) are still solid blocks
+  from the old language. The mockup used a soft accent wash + accent text instead.
+- Nested `bg-card-2` chips, the kanban cards and form fields still carry faint fills. They
+  degrade fine, but the kanban wants the mockup's 2px priority-tick treatment.
+- No hub has picked its `lead` metric yet (`<StatTile lead />` → `.emissive`).
 
 **Design rules live in `DESIGN_GUIDE.md`.**
 

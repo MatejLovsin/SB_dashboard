@@ -21,7 +21,7 @@ export function TopBar() {
 
   return (
     <header className="safe-top sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur md:px-6">
-      <h1 className="text-base font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-sm font-bold">{title}</h1>
       <button
         type="button"
         onClick={signOut}

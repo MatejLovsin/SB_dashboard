@@ -8,8 +8,6 @@ import { UpcomingExams } from '@/features/school/UpcomingExams';
 import { StudyTimer } from '@/features/school/StudyTimer';
 import { SchoolCharts } from '@/features/school/SchoolCharts';
 import { createClient } from '@/lib/supabase/server';
-import { getSummary } from '@/lib/queries/ai';
-import { SummaryCard } from '@/components/ai/SummaryCard';
 import {
   listSubjects,
   listUpcomingExamsWithProgress,
@@ -25,8 +23,7 @@ import { deltaPercent } from '@/lib/utils/stats';
 export default async function SchoolPage() {
   const supabase = await createClient();
 
-  const [summary, sessions, subjects, upcomingExams] = await Promise.all([
-    getSummary(supabase, 'school').catch(() => null),
+  const [sessions, subjects, upcomingExams] = await Promise.all([
     listRecentStudySessions(supabase),
     listSubjects(supabase),
     listUpcomingExamsWithProgress(supabase),
@@ -48,8 +45,6 @@ export default async function SchoolPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="School" description="Exams, study sessions, and results." />
-
-      <SummaryCard section="school" initial={summary} />
 
       {/* KPI strip — 4-col on desktop */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

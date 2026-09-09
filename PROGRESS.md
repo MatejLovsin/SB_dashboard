@@ -22,6 +22,13 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 
 No active redesign tasks. Next work: new features or content updates.
 
+**AI summaries removed (2026-09-09).** The `SummaryCard` button on `/fitness`, `/school`,
+`/work` and the summary blurbs on the home bento were never used and never worked, so the
+whole feature is gone: `components/ai/`, `lib/ai/`, `lib/queries/ai.ts`, `app/api/summary/`
+deleted and `@anthropic-ai/sdk` uninstalled. The `ai_summaries` table and its `lib/db/types.ts`
+entry are intentionally left in place (no migration written) — drop them if you want the
+schema clean. The journal's *weekly summary* is user-written and unrelated.
+
 **Open question (weekly programme):** the seeded split follows `full_programme_updated.svg`
 literally, where the light days are asymmetric — **DB incl** and **Pullup** are light on *both*
 Legs and Lower, while **Dips** and **Row** are light only on Upper. Unconfirmed whether that's
@@ -148,7 +155,7 @@ without a migration: toggle the chips at `/fitness/programme`.
   board.
 
 - [x] **Weekly programme strip** — the training split pinned to the **top of `/fitness`**, directly
-  under `PageHeader` and above the AI summary. Source of truth: `full_programme_updated.svg`
+  under `PageHeader`. Source of truth: `full_programme_updated.svg`
   (kept in the repo root as the design reference). Table `programme_days` (migration
   `0015_programme.sql`) holds **exactly 7 rows per user**, one per ISO weekday (`1`=Mon … `7`=Sun,
   `unique (user_id, weekday)`); a null `label` means **rest day**. That fixed-7 shape makes "what

@@ -22,7 +22,6 @@ Copy `.env.local.example` to `.env.local` and fill in from Supabase → Project 
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-ANTHROPIC_API_KEY=...        # only needed from Session 8 onward
 ```
 
 ### 3. Run locally

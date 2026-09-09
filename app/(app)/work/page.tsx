@@ -10,8 +10,6 @@ import { KanbanBoard } from '@/features/work/KanbanBoard';
 import { WorkCharts } from '@/features/work/WorkCharts';
 import { WorkMetricLogger } from '@/features/work/WorkMetricLogger';
 import { createClient } from '@/lib/supabase/server';
-import { getSummary } from '@/lib/queries/ai';
-import { SummaryCard } from '@/components/ai/SummaryCard';
 import {
   listCards,
   listBoards,
@@ -24,8 +22,7 @@ import {
 export default async function WorkPage() {
   const supabase = await createClient();
 
-  const [summary, cards, boards, notes, metrics] = await Promise.all([
-    getSummary(supabase, 'work').catch(() => null),
+  const [cards, boards, notes, metrics] = await Promise.all([
     listCards(supabase),
     listBoards(supabase),
     listNotes(supabase),
@@ -46,8 +43,6 @@ export default async function WorkPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Work" description="Roadmap, decisions, and analytics." />
-
-      <SummaryCard section="work" initial={summary} />
 
       {/* KPI strip — 4 tiles */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

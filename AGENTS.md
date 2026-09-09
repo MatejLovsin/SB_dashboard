@@ -7,7 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # Personal Dashboard — project notes
 
 A private, single-user "second brain" for **Fitness**, **School**, **Work**, plus a
-home dashboard with AI summaries. Mobile-first; Fitness is the heavy mobile-use section.
+home dashboard. Mobile-first; Fitness is the heavy mobile-use section.
 
 > 🟢 **START HERE every session:** read `PROGRESS.md` first — it holds the current status
 > and the exact next step. Update it as you complete work.
@@ -19,7 +19,6 @@ component structure, 9-session roadmap). We are building it session by session.
 - Next.js 16 (App Router, TypeScript, Turbopack) · Tailwind v4 (CSS config in `app/globals.css`)
 - Supabase (Postgres + Auth, single user) · `@supabase/ssr`
 - TanStack Query (interactive client state) · Recharts (charts) · lucide-react (icons)
-- `@anthropic-ai/sdk`, model `claude-sonnet-4-6`, server-side only (Session 8)
 
 ## Conventions
 - Import alias `@/*` → repo root. No `src/` dir. Pages live under `app/(app)/` (route
@@ -37,7 +36,7 @@ component structure, 9-session roadmap). We are building it session by session.
 
 ## Validate changes
 `npx tsc --noEmit` then `npm run build`. Build passes without secrets (authenticated pages
-are dynamic). For runtime, `.env.local` needs the Supabase URL + anon key (+ Anthropic key).
+are dynamic). For runtime, `.env.local` needs the Supabase URL + anon key.
 
 ## File-reading discipline — follow this strictly
 Token budget is tight. Do NOT speculatively read files to "understand the project". Only read

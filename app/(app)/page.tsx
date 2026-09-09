@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Dumbbell, GraduationCap, Briefcase, ChevronRight, BookOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { getSummary } from '@/lib/queries/ai';
 import { getHomeMetrics } from '@/lib/queries/home';
 import { getJournalHomeState, weekRangeLabel } from '@/lib/queries/journal';
 import { StatTile } from '@/components/ui/StatTile';
@@ -16,11 +15,8 @@ function fmtVol(kg: number): number {
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const [metrics, fitnessSummary, schoolSummary, workSummary, journalState] = await Promise.all([
+  const [metrics, journalState] = await Promise.all([
     getHomeMetrics(supabase).catch(() => null),
-    getSummary(supabase, 'fitness').catch(() => null),
-    getSummary(supabase, 'school').catch(() => null),
-    getSummary(supabase, 'work').catch(() => null),
     getJournalHomeState(supabase).catch(() => null),
   ]);
 
@@ -65,7 +61,7 @@ export default async function HomePage() {
         </StatTile>
       </div>
 
-      {/* 3-area bento: each hub is a clickable panel with number + chart + summary */}
+      {/* 3-area bento: each hub is a clickable panel with number + chart */}
       <div className="stagger-fade grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Fitness */}
         <Link href="/fitness" className="block">
@@ -88,9 +84,6 @@ export default async function HomePage() {
             <div className="h-14">
               <Sparkline data={metrics?.fitness.weeklyVolumeSparkline ?? []} height={56} />
             </div>
-            {fitnessSummary?.content && (
-              <p className="line-clamp-2 text-xs text-muted">{fitnessSummary.content}</p>
-            )}
           </Card>
         </Link>
 
@@ -115,9 +108,6 @@ export default async function HomePage() {
             <div className="h-14">
               <Sparkline data={metrics?.school.weeklyHoursSparkline ?? []} height={56} />
             </div>
-            {schoolSummary?.content && (
-              <p className="line-clamp-2 text-xs text-muted">{schoolSummary.content}</p>
-            )}
           </Card>
         </Link>
 
@@ -142,9 +132,6 @@ export default async function HomePage() {
             <div className="h-14">
               <Sparkline data={metrics?.work.notesPerWeekSparkline ?? []} height={56} />
             </div>
-            {workSummary?.content && (
-              <p className="line-clamp-2 text-xs text-muted">{workSummary.content}</p>
-            )}
           </Card>
         </Link>
       </div>

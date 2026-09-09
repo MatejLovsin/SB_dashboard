@@ -6,8 +6,6 @@ import { StatTile } from '@/components/ui/StatTile';
 import { CountUp } from '@/components/ui/CountUp';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { createClient } from '@/lib/supabase/server';
-import { getSummary } from '@/lib/queries/ai';
-import { SummaryCard } from '@/components/ai/SummaryCard';
 import { FitnessOverviewPreview } from '@/features/fitness/FitnessOverviewPreview';
 import { PlanListPreview } from '@/features/fitness/PlanListPreview';
 import { PinnedLifts } from '@/features/fitness/PinnedLifts';
@@ -47,8 +45,7 @@ async function getRecentExerciseNames(count = 5): Promise<string[]> {
 
 export default async function FitnessPage() {
   const supabase = await createClient();
-  const [summary, recentExercises, pinnedLifts, hubMetrics, programmeDays] = await Promise.all([
-    getSummary(supabase, 'fitness').catch(() => null),
+  const [recentExercises, pinnedLifts, hubMetrics, programmeDays] = await Promise.all([
     getRecentExerciseNames(),
     getPinnedLiftTrends(supabase).catch(() => []),
     getFitnessHubMetrics(supabase).catch(() => null),
@@ -65,8 +62,6 @@ export default async function FitnessPage() {
       <PageHeader title="Fitness" description="Push / Pull / Legs — strength focus." />
 
       {programmeDays.length > 0 && <WeekProgramme days={programmeDays} />}
-
-      <SummaryCard section="fitness" initial={summary} />
 
       {/* KPI strip */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

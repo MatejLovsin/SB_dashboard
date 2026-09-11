@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { NoteForm } from './NoteForm';
 import { NoteDetail } from './NoteDetail';
+import { markdownExcerpt } from '@/lib/utils/markdown';
 
 function NoteRow({
   note,
@@ -47,7 +48,9 @@ function NoteRow({
         <div className="min-w-0 flex-1">
           <p className="font-semibold leading-snug">{note.title}</p>
           {note.body && (
-            <p className="mt-1 text-sm text-muted line-clamp-3 whitespace-pre-line">{note.body}</p>
+            <p className="longform mt-1 line-clamp-3 text-sm text-muted">
+              {markdownExcerpt(note.body)}
+            </p>
           )}
           <p className="mt-2 text-xs text-muted">{date}</p>
         </div>
@@ -202,6 +205,7 @@ export function NoteList() {
       )}
 
       <FocusOverlay
+        size="reading"
         open={!!focusNote}
         onClose={() => setFocusNote(null)}
         title={displayNote?.title}

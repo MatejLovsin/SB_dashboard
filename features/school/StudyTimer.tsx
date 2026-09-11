@@ -14,7 +14,7 @@ import {
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { TextArea } from '@/components/ui/TextArea';
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
 import { inputClasses } from '@/components/ui/Input';
 import { Play, Pause, Square } from 'lucide-react';
 
@@ -248,11 +248,12 @@ export function StudyTimer() {
             <p className="mt-1 text-sm text-muted">{selectedSubject?.name}</p>
           </div>
 
-          <TextArea
+          <MarkdownEditor
             placeholder="Session notes (optional)"
-            rows={5}
+            rows={6}
+            maxRows={22}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={setNote}
           />
 
           <div className="flex gap-2">

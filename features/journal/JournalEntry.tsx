@@ -10,7 +10,7 @@ import {
   weekRangeLabel,
 } from '@/lib/queries/journal';
 import { createClient } from '@/lib/supabase/client';
-import { TextArea } from '@/components/ui/TextArea';
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
 import { Button } from '@/components/ui/Button';
 
 interface JournalEntryProps {
@@ -57,12 +57,12 @@ export function JournalEntry({ entryOpen, targetWeekStart }: JournalEntryProps) 
       <h2 className="text-base font-semibold">
         Week of {weekRangeLabel(targetWeekStart)}
       </h2>
-      <TextArea
+      <MarkdownEditor
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="What happened this week…"
-        maxRows={16}
-        className="w-full"
+        onChange={setContent}
+        placeholder="What happened this week…&#10;&#10;## Training&#10;- …"
+        rows={14}
+        maxRows={32}
       />
       <div className="flex items-center justify-between">
         <Link

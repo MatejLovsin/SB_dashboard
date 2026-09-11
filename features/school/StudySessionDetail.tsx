@@ -1,5 +1,6 @@
 import { CalendarDays } from 'lucide-react';
 import type { StudySessionWithSubject } from '@/lib/queries/school';
+import { Markdown } from '@/components/ui/Markdown';
 
 function fmtDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -10,8 +11,8 @@ function fmtDuration(seconds: number): string {
 
 /**
  * Read-only expanded view of a single study session — full untruncated content and metadata.
- * Rendered inside a {@link FocusOverlay}; visually distinct from the compact row
- * (larger type, generous spacing, eyebrow date chip).
+ * Rendered inside a `reading`-size {@link FocusOverlay}; the note is markdown,
+ * set in the long-form reading face by {@link Markdown}.
  */
 export function StudySessionDetail({ session }: { session: StudySessionWithSubject }) {
   const date = new Date(session.started_at).toLocaleDateString(undefined, {
@@ -38,10 +39,8 @@ export function StudySessionDetail({ session }: { session: StudySessionWithSubje
         <span className="tabular-nums text-accent">{fmtDuration(session.duration_seconds)}</span>
       </div>
 
-      {session.note ? (
-        <p className="whitespace-pre-line text-[15px] leading-relaxed text-foreground/85">
-          {session.note}
-        </p>
+      {session.note?.trim() ? (
+        <Markdown>{session.note}</Markdown>
       ) : (
         <p className="text-sm italic text-muted">No notes.</p>
       )}

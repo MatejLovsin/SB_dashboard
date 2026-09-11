@@ -12,6 +12,7 @@ import {
 import type { DiscardedStudySession } from '@/lib/db/types';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { markdownExcerpt } from '@/lib/utils/markdown';
 
 function fmtDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -110,7 +111,9 @@ export function DiscardedSessions() {
                   Discarded {fmtDatetime(session.discarded_at)}
                 </p>
                 {session.note && (
-                  <p className="mt-2 line-clamp-2 text-xs text-muted">{session.note}</p>
+                  <p className="longform mt-2 line-clamp-2 text-xs text-muted">
+                    {markdownExcerpt(session.note)}
+                  </p>
                 )}
               </div>
 

@@ -31,11 +31,46 @@ What changed, and why it propagates without touching pages:
 - Verified: `npx tsc --noEmit` clean, `npm run build` clean, and the depth chain measured live
   in the browser (ink .957 → .835, rules .11 → .06 top to bottom of a page).
 
-**⚑ Open task — the long-form typography pass.** `--type-longform` + `.longform` /
-`font-longform` are declared and wired through Tailwind but **deliberately resolve to Archivo
-today, and nothing is tagged yet**. Next session: walk the app and tag what is genuinely *read*
-rather than scanned — journal entries, exercise notes, session notes, school notes, work notes —
-then pick the reading face. One line in `globals.css` switches all tagged surfaces at once.
+**Long-form typography pass — DONE (2026-09-11).** `--type-longform` now resolves to
+**Newsreader** (variable optical size + italic, loaded in `layout.tsx`), and the three surfaces
+that are genuinely *read* rather than scanned are **markdown end-to-end**: weekly journal
+entries, work notes, study session notes (incl. discarded sessions).
+
+- **No migration.** The markdown source is stored in the existing text columns
+  (`journal_weeks.content`, `notes.body`, `study_sessions.note`). Old plain-text entries render
+  unchanged — plain prose is already valid markdown.
+- **Read:** `components/ui/Markdown.tsx` — react-markdown + remark-gfm rendering into
+  `.longform-body`. Raw HTML in the source is deliberately **not** rendered (no `rehype-raw`).
+  Tables get their own scroll container; links open in a new tab.
+- **Write:** `components/ui/MarkdownEditor.tsx` — Write/Preview tabs on a hairline rail, a
+  caret-aware toolbar (H2 · H3 · bold · italic · bullets · numbers · quote · link) that toggles
+  syntax on the selected lines, `Ctrl/⌘ + B/I/K`, and Enter continuing (or ending) a list.
+  Preview renders through the same `<Markdown>`, so the two sides can't drift. Wraps the
+  existing auto-grow `TextArea`; the writing surface is borderless and set in the reading face
+  at the reading measure, so a line breaks where it will when read back.
+- **List previews:** `markdownExcerpt()` in `lib/utils/markdown.ts` flattens the source to plain
+  prose so a `line-clamp` row never shows `##` / `**`. Regex, not a parse — the output is never
+  rendered as markup. Underscore emphasis is boundary-guarded so `plan_set_id` survives.
+- **More room to read:** `FocusOverlay` gained `size="reading"` — `max-w-2xl` / `max-h-[90vh]`
+  with wider padding, vs the compact `max-w-lg` default. Used by the journal review, work notes
+  and study session history overlays. The compact size is still correct for short detail
+  read-outs and forms.
+- **All typography lives in `.longform-body`** (`globals.css`), derived from the lit tokens so a
+  reading surface dims with the lamp: 17px/1.7, `--reading-measure` 68ch, headings in the
+  reading face (`####` drops to the label face as an uppercase divider), bullets as a short
+  accent rule, ordered markers in label-face numerals, GFM tables/task lists/strikethrough.
+  Switching the reading face is still one line: `--type-longform`.
+- New deps: `react-markdown`, `remark-gfm`. Verified `npx tsc --noEmit` + `npm run build` clean;
+  **not yet eyeballed in the browser** (the Chrome extension wasn't connected this session).
+
+**Overlay panels made opaque (2026-09-11).** With `.panel` drawing no fill, `FocusOverlay`'s
+floating panel let the dimmed page read straight through its text — unreadable on anything long.
+New `.floating-panel` class in `globals.css` (used only by `FocusOverlay`): opaque **`#0d0d10`**
+fill (a touch *above* the page's `#09090b` — pure black read as a hole, since the dimmed
+backdrop computes to about `#030303`), a hairline on all four sides (a floating surface has to show its own edges, and the top
+edge is brighter because the lamp hangs above), and `--depth: 0.06` with the ink/rule tokens
+re-declared — so overlay content is the most-lit text on screen. The backdrop is unchanged
+(`bg-black/70` + blur). This is the **only** opaque fill in the app; `.panel` stays fill-less.
 
 **Not yet done (per-page work, needs eyes on the real screens):**
 - Section *order* is now a visual decision (first section gets the light). No page has been

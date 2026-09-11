@@ -77,13 +77,18 @@
   --type-label: var(--font-spline), ui-monospace, monospace;
   --type-body: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
 
-  /* ⚑ RESERVED — long-form reading face.
-   * Nothing is flagged as long-form yet. A later session walks the app and tags
-   * the places where it belongs (journal entries, exercise notes, session
-   * notes, school notes) with `.longform` / `font-longform`. Until then this
-   * deliberately resolves to the body face, so tagging something early is
-   * harmless and switching the face later is a one-line change here. */
-  --type-longform: var(--type-body);
+  /* Long-form reading face — the surfaces that are READ, not scanned:
+   * journal entries, work notes, study session notes. Newsreader is a variable
+   * optical-size serif, so the same face works at 17px body and 22px heading
+   * inside one entry. Tag with `.longform` (face only) or `.longform-body`
+   * (face + the whole reading scale). Never set a serif family in a component.
+   * Switching the reading face is still a one-line change right here. */
+  --type-longform: var(--font-newsreader), Georgia, "Times New Roman", serif;
+
+  /* Reading measure — the max line length for long-form text. ~68 characters
+   * is the band where the eye reliably finds the next line. Everything that
+   * renders an entry (overlay panel, composer, preview) uses this one number. */
+  --reading-measure: 68ch;
 
   /* Motion */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -214,10 +219,229 @@ h2 {
   letter-spacing: 0.16em;
 }
 
-/* ⚑ Long-form reading. Resolves to the body face until the long-form pass. */
+/* ── Long-form reading ─────────────────────────────────────────────────────
+ * `.longform` is the face alone — for a lone paragraph that happens to be read
+ * rather than scanned. `.longform-body` is the full reading surface: measure,
+ * vertical rhythm, and every markdown element an entry can contain. It is what
+ * <Markdown> renders into and what the composer's Preview tab uses, so what you
+ * write and what you read are set identically.
+ *
+ * Everything here derives from the lit tokens (--foreground / --muted /
+ * --border / --accent), so a reading surface dims with the lamp like the rest
+ * of the interface. Headings stay in the reading face at heavier weight — the
+ * display face (Martian Mono) is for UI titles, never for prose inside an
+ * entry. The one exception is `####`, which drops to the label face as a small
+ * uppercase divider. */
 .longform {
   font-family: var(--type-longform);
   letter-spacing: 0;
+}
+
+.longform-body {
+  font-family: var(--type-longform);
+  font-size: 1.0625rem; /* 17px — Newsreader needs the extra px over UI text */
+  line-height: 1.7;
+  letter-spacing: 0;
+  color: color-mix(in srgb, var(--foreground) 92%, transparent);
+  max-width: var(--reading-measure);
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+/* Flow rhythm: one rule for the default gap, then wider air above headings. */
+.longform-body > * + * {
+  margin-top: 1.05em;
+}
+.longform-body > * + h1,
+.longform-body > * + h2 {
+  margin-top: 1.9em;
+}
+.longform-body > * + h3 {
+  margin-top: 1.55em;
+}
+.longform-body > * + h4 {
+  margin-top: 1.8em;
+}
+.longform-body > :is(h1, h2, h3, h4) + * {
+  margin-top: 0.55em;
+}
+.longform-body > :first-child {
+  margin-top: 0;
+}
+
+.longform-body :is(h1, h2, h3) {
+  font-family: var(--type-longform);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+.longform-body h1 {
+  font-size: 1.65em;
+}
+.longform-body h2 {
+  font-size: 1.32em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+.longform-body h3 {
+  font-size: 1.1em;
+}
+.longform-body h4 {
+  font-family: var(--type-label);
+  font-size: 0.72em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* Lists. The bullet is a short accent rule, not a dot — same vocabulary as the
+ * hairline rules that replaced the cards. Ordered markers take the label face
+ * so they read as instrument numbering. */
+.longform-body :is(ul, ol) {
+  list-style: none;
+  padding-left: 1.3em;
+}
+.longform-body li {
+  position: relative;
+}
+.longform-body li + li,
+.longform-body li > :is(ul, ol) {
+  margin-top: 0.4em;
+}
+.longform-body li > * + * {
+  margin-top: 0.5em;
+}
+.longform-body ul > li::before {
+  content: '';
+  position: absolute;
+  left: -1.15em;
+  top: 0.82em;
+  width: 0.55em;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.longform-body ol {
+  counter-reset: longform-ol;
+}
+.longform-body ol > li::before {
+  counter-increment: longform-ol;
+  content: counter(longform-ol);
+  position: absolute;
+  left: -1.45em;
+  top: 0.12em;
+  width: 1.2em;
+  font-family: var(--type-label);
+  font-size: 0.72em;
+  text-align: right;
+  color: color-mix(in srgb, var(--accent) 85%, transparent);
+}
+
+/* GFM task lists — the checkbox replaces the marker. */
+.longform-body li:has(> input[type='checkbox'])::before {
+  display: none;
+}
+.longform-body input[type='checkbox'] {
+  margin-right: 0.5em;
+  accent-color: var(--accent);
+  vertical-align: baseline;
+}
+
+.longform-body blockquote {
+  padding-left: 1em;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  font-style: italic;
+  color: var(--muted);
+}
+
+.longform-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: text-decoration-color var(--dur-fast) ease;
+}
+.longform-body a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.longform-body strong {
+  font-weight: 650;
+  color: var(--foreground);
+}
+.longform-body em {
+  font-style: italic;
+}
+.longform-body del {
+  color: var(--muted);
+}
+
+.longform-body code {
+  font-family: var(--type-label);
+  font-size: 0.85em;
+  letter-spacing: 0;
+  background: var(--card-2);
+  padding: 0.1em 0.38em;
+  border-radius: 0.35em;
+}
+.longform-body pre {
+  font-family: var(--type-label);
+  font-size: 0.82em;
+  line-height: 1.6;
+  padding: 0.9em 1em;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card);
+  overflow-x: auto;
+}
+.longform-body pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+}
+
+.longform-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 1.9em;
+}
+
+/* Tables come from GFM. <Markdown> wraps them in a scroll container, so the
+ * table itself only has to handle its own rules. */
+.longform-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+.longform-body th {
+  font-family: var(--type-label);
+  font-size: 0.66rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  text-align: left;
+  color: var(--muted);
+  padding: 0 0.8em 0.5em 0;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.longform-body td {
+  padding: 0.55em 0.8em 0.55em 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.longform-body :is(th, td):last-child {
+  padding-right: 0;
+}
+
+/* The writing side of the same surface: the composer textarea is held to the
+ * same measure so a line breaks in the same place while you type as it will
+ * when you read it back. */
+.reading-measure {
+  max-width: var(--reading-measure);
 }
 
 /* Numbers are display-face and tabular so metrics line up column-to-column. */
@@ -270,6 +494,37 @@ h2 {
   border: 0;
   border-top: 1px solid var(--border);
   background: none;
+  box-shadow: none;
+}
+
+/*
+ * Floating panel — the one surface in the app that is NOT part of the page's
+ * light chain: a modal lifted out of the document over a dimmed backdrop.
+ *
+ * `.panel` has no fill because the page behind it IS its background. A floating
+ * panel has no such luxury — the dimmed-but-still-visible page reads straight
+ * through the text. So this is the single place allowed an opaque fill, and the
+ * hairline is drawn on all four sides rather than just the top, because a
+ * floating panel has to show its own edges against the backdrop.
+ *
+ * It also sits nearest the lamp (`--depth` .06, ink/rule tokens re-declared per
+ * the NOTE at the top of this file), which is the point: whatever you opened
+ * the overlay to read is the most-lit text on the screen.
+ */
+.floating-panel {
+  --depth: 0.06;
+  --lit: calc((1 - var(--depth)) * var(--light-response));
+  --foreground: rgba(255, 255, 255, calc(0.82 + 0.18 * var(--lit)));
+  --muted: rgba(255, 255, 255, calc(0.42 + 0.14 * var(--lit)));
+  --border: rgba(255, 255, 255, calc(0.05 + 0.08 * var(--lit)));
+
+  /* A touch ABOVE the page (#09090b), not below it. The dimmed backdrop computes
+   * to roughly #030303, so a pure-black panel read as a hole punched in the page
+   * rather than a card floating over it. */
+  background: #0d0d10;
+  border: 1px solid var(--border);
+  /* The lamp hangs above, so the top edge catches more of it. */
+  border-top-color: rgba(255, 255, 255, 0.16);
   box-shadow: none;
 }
 

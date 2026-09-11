@@ -17,7 +17,9 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
-import { TextArea } from '@/components/ui/TextArea';
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
+import { Markdown } from '@/components/ui/Markdown';
+import { markdownExcerpt } from '@/lib/utils/markdown';
 
 // ---------------------------------------------------------------------------
 // Week card row
@@ -49,8 +51,8 @@ function WeekCard({
         <div className="min-w-0 flex-1">
           <p className="font-semibold leading-snug">{weekRangeLabel(week.week_start)}</p>
           {week.content && (
-            <p className="mt-1 text-sm text-muted line-clamp-2 whitespace-pre-line">
-              {week.content}
+            <p className="longform mt-1 line-clamp-2 text-sm text-muted">
+              {markdownExcerpt(week.content)}
             </p>
           )}
         </div>
@@ -194,11 +196,12 @@ export function JournalReview() {
               ))}
             </select>
           </div>
-          <TextArea
+          <MarkdownEditor
             value={pastContent}
-            onChange={(e) => setPastContent(e.target.value)}
+            onChange={setPastContent}
             placeholder="What happened this week…"
-            maxRows={12}
+            rows={8}
+            maxRows={24}
           />
           <div className="flex gap-2">
             <Button
@@ -246,10 +249,11 @@ export function JournalReview() {
                   <p className="text-sm font-semibold">
                     {weekRangeLabel(week.week_start)}
                   </p>
-                  <TextArea
+                  <MarkdownEditor
                     value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    maxRows={12}
+                    onChange={setEditContent}
+                    rows={10}
+                    maxRows={30}
                   />
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -294,6 +298,7 @@ export function JournalReview() {
 
       {/* Read-only focus overlay */}
       <FocusOverlay
+        size="reading"
         open={!!focusWeek}
         onClose={() => setFocusWeek(null)}
         title={displayWeek ? weekRangeLabel(displayWeek.week_start) : undefined}
@@ -321,11 +326,7 @@ export function JournalReview() {
           ) : null
         }
       >
-        {displayWeek && (
-          <p className="whitespace-pre-line text-[15px] leading-relaxed text-foreground/85">
-            {displayWeek.content}
-          </p>
-        )}
+        {displayWeek && <Markdown>{displayWeek.content}</Markdown>}
       </FocusOverlay>
     </div>
   );

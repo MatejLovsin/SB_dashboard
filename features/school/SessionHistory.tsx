@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { StudySessionDetail } from './StudySessionDetail';
+import { markdownExcerpt } from '@/lib/utils/markdown';
 
 function fmtDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -107,7 +108,9 @@ export function SessionHistory() {
                 {fmtDatetime(session.started_at)}
               </p>
               {session.note && (
-                <p className="mt-2 line-clamp-2 text-xs text-muted">{session.note}</p>
+                <p className="longform mt-2 line-clamp-2 text-xs text-muted">
+                  {markdownExcerpt(session.note)}
+                </p>
               )}
             </div>
 
@@ -129,6 +132,7 @@ export function SessionHistory() {
       ))}
 
       <FocusOverlay
+        size="reading"
         open={!!focusSession}
         onClose={() => setFocusSession(null)}
         title={displaySession ? (displaySession.subject_name ?? 'Unknown subject') : undefined}

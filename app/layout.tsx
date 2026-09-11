@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo, Martian_Mono, Spline_Sans_Mono } from 'next/font/google';
+import { Archivo, Martian_Mono, Newsreader, Spline_Sans_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
@@ -18,10 +18,19 @@ const splineMono = Spline_Sans_Mono({
   weight: ['400', '500', '600'],
 });
 
-// Body / UI text. Also the current fallback for `--type-longform`.
+// Body / UI text.
 const archivo = Archivo({
   variable: '--font-archivo',
   subsets: ['latin'],
+});
+
+// Long-form reading face (`--type-longform`) — journal entries, work notes,
+// study session notes. Optical sizing is what makes it hold up from a phone
+// body size up to an overlay heading, so the variable axis is loaded.
+const newsreader = Newsreader({
+  variable: '--font-newsreader',
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
 });
 
 export const metadata: Metadata = {
@@ -49,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${martianMono.variable} ${splineMono.variable} ${archivo.variable} h-full antialiased`}
+      className={`${martianMono.variable} ${splineMono.variable} ${archivo.variable} ${newsreader.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
         <Providers>{children}</Providers>

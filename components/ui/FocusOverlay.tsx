@@ -15,15 +15,44 @@ interface FocusOverlayProps {
   label?: string;
   /** Optional node rendered top-right of the panel header rail (e.g. Edit button). */
   action?: ReactNode;
+  /**
+   * `default` — the compact panel used for detail read-outs and short forms.
+   * `reading` — the long-form surface: a wider panel, more air, and room for the
+   * full reading measure. Use it wherever <Markdown> renders an entry.
+   */
+  size?: 'default' | 'reading';
 }
+
+const sizeClasses = {
+  default: { panel: 'max-w-lg max-h-[85vh]', pad: 'px-6', head: 'pt-6', body: 'pb-7 pt-4' },
+  reading: {
+    panel: 'max-w-2xl max-h-[90vh]',
+    pad: 'px-5 sm:px-9',
+    head: 'pt-6 sm:pt-8',
+    body: 'pb-9 pt-5',
+  },
+} as const;
 
 /**
  * Full-screen focal overlay — Instagram-style. Dims + blurs everything behind,
  * floats a single panel to the centre of the screen with a scale/fade entrance,
  * and stays the sole focal point until dismissed (backdrop click, Escape, or the
  * close button). Read-only content lives in `children`.
+ *
+ * The panel uses `.floating-panel`, not `.panel` — it is the one surface in the
+ * app with an opaque fill, because the dimmed page behind it would otherwise
+ * read straight through the text. See the note in `globals.css`.
  */
-export function FocusOverlay({ open, onClose, children, title, label, action }: FocusOverlayProps) {
+export function FocusOverlay({
+  open,
+  onClose,
+  children,
+  title,
+  label,
+  action,
+  size = 'default',
+}: FocusOverlayProps) {
+  const s = sizeClasses[size];
   const { mounted, entered } = useMountTransition(open, 480);
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
@@ -80,7 +109,7 @@ export function FocusOverlay({ open, onClose, children, title, label, action }: 
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="panel relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col rounded-3xl outline-none"
+        className={`floating-panel relative z-10 flex w-full flex-col rounded-3xl outline-none ${s.panel}`}
         style={{
           opacity: entered ? 1 : 0,
           transform: entered ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(12px)',
@@ -90,7 +119,7 @@ export function FocusOverlay({ open, onClose, children, title, label, action }: 
       >
         {/* Header rail — title sits inline with the action/close buttons, top-aligned
             so a long title wraps (up to 3 lines) without shoving the controls down. */}
-        <div className="flex items-start justify-between gap-3 px-6 pt-6">
+        <div className={`flex items-start justify-between gap-3 ${s.pad} ${s.head}`}>
           <h2 className="min-w-0 flex-1 break-words pt-0.5 text-xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere] line-clamp-3">
             {title}
           </h2>
@@ -108,7 +137,7 @@ export function FocusOverlay({ open, onClose, children, title, label, action }: 
         </div>
 
         {/* Scrollable content */}
-        <div className="no-scrollbar overflow-y-auto px-6 pb-7 pt-4">{children}</div>
+        <div className={`no-scrollbar overflow-y-auto ${s.pad} ${s.body}`}>{children}</div>
       </div>
     </div>,
     document.body,

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { NoteInput } from '@/lib/queries/work';
 import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
 import { Button } from '@/components/ui/Button';
 
 interface Props {
@@ -36,13 +36,14 @@ export function NoteForm({ initial, onSubmit, onCancel, isPending }: Props) {
         autoFocus
       />
 
-      <TextArea
+      <MarkdownEditor
         label="Body (optional)"
         id="note-body"
         value={body ?? ''}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={setBody}
         placeholder="Context, reasoning, links…"
-        rows={6}
+        rows={8}
+        maxRows={26}
       />
 
       <Input

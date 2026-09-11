@@ -53,17 +53,52 @@ At most one number per screen may take `.emissive` (the lead metric, via `<StatT
 | Page + panel + action titles, all numbers | `.display`, `.nums` (`h1`/`h2` get it free) | **Martian Mono** 700, `-0.045em` |
 | Micro-labels, units, meta, column heads | `.label` (uppercase, `.16em`) | **Spline Sans Mono** |
 | Body / UI text | default | **Archivo** |
-| ⚑ Long-form reading | `.longform` / `font-longform` | **reserved — resolves to Archivo today** |
+| Long-form reading (entries that are *read*) | `.longform` (face) / `.longform-body` (full scale) | **Newsreader** (variable optical size, italic) |
 
 Martian Mono is wide. The negative tracking is not optional, and long titles need checking at
 phone width before they ship.
 
-> ⚑ **The long-form token is deliberately unused.** `--type-longform` is declared and wired
-> through Tailwind but currently resolves to the body face. A later session walks the app and
-> tags the places that are genuinely read rather than scanned — journal entries, exercise and
-> session notes, school notes — with `.longform`. Tagging something early is harmless; when we
-> pick the reading face, it's a one-line change in `globals.css` and every tagged surface
-> switches at once. Do not pick that face ad-hoc in a component.
+**D. Long-form surfaces.** Three places in the app hold text that is *read*, not scanned:
+**weekly journal entries**, **work notes**, and **study session notes**. They are markdown
+end-to-end — the raw source is stored in the existing text column, and both sides of the loop
+render through one pair of components:
+
+| | Component | Notes |
+|---|---|---|
+| Read | `<Markdown>` (`components/ui/Markdown.tsx`) | react-markdown + remark-gfm into `.longform-body`. Raw HTML in the source is **not** rendered. Tables get their own scroll container; links open in a new tab. |
+| Write | `<MarkdownEditor>` (`components/ui/MarkdownEditor.tsx`) | Write/Preview tabs, a caret-aware toolbar (H2 · H3 · bold · italic · list · numbered · quote · link), `Ctrl/⌘ + B/I/K`, and Enter-continues-a-list. Preview renders through `<Markdown>`, so the two sides cannot drift. |
+| List preview | `markdownExcerpt()` (`lib/utils/markdown.ts`) | Flattens the source to plain prose so a `line-clamp` row never shows `##` or `**`. |
+
+All the typography lives in **`.longform-body`** in `globals.css` — measure, rhythm, headings,
+lists, quotes, code, tables — and derives from the lit tokens, so a reading surface dims with
+the lamp like everything else. A component must never restyle prose itself.
+
+- **Measure.** `--reading-measure` (68ch) caps every reading surface, and `.reading-measure`
+  applies the same cap to the writing one, so a line breaks in the same place in both.
+- **Headings inside an entry stay in the reading face**, heavier — Martian Mono is for UI
+  titles, never for prose. `####` is the one exception and drops to the label face as a small
+  uppercase divider.
+- **Bullets are a short accent rule**, ordered markers are label-face numerals — the same
+  hairline vocabulary that replaced the cards.
+- An overlay that hosts an entry must be `<FocusOverlay size="reading">` (wider panel, more
+  air). The default size is still right for compact detail read-outs and short forms.
+
+> Switching the reading face stays a one-line change: `--type-longform` in `globals.css` (plus
+> the `next/font` import in `layout.tsx`). Never pick a face ad-hoc in a component.
+
+---
+
+### Floating panels are the one exception to "no fill"
+
+`.panel` has no background on purpose: the page behind it *is* its background. That breaks the
+moment a surface is lifted out of the document over a dimmed backdrop — the page reads straight
+through the text. `FocusOverlay`'s panel therefore uses **`.floating-panel`**: an opaque
+`#0d0d10` fill — one step *above* the page, since pure black sits below the dimmed backdrop and
+reads as a hole — a hairline on all four sides (a floating thing has to show its own edges), and
+`--depth: 0.06` with the ink tokens re-declared, so whatever you opened the overlay to read is
+the most-lit text on screen. The backdrop around it is unchanged — dimmed + blurred page.
+
+This is the **only** place in the app allowed an opaque fill. Do not use it to rebuild a card.
 
 ---
 

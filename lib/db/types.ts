@@ -6,6 +6,16 @@ export type RoadmapStatus = 'idea' | 'planned' | 'in_progress' | 'done';
 export type Priority = 'low' | 'medium' | 'high';
 export type AiSection = 'fitness' | 'school' | 'work';
 
+export type GoalSection = 'fitness' | 'school' | 'work' | 'life';
+export type GoalStatus = 'active' | 'achieved' | 'archived';
+export type GoalSource = 'manual' | 'auto';
+export type GoalDirection = 'up' | 'down';
+
+// The binding on an auto goal, stored in `goals.metric`. The authoritative union
+// of shapes is `GoalMetric` in lib/queries/goals.ts — this stays loose because
+// the column is jsonb and adding a metric kind must not need a migration.
+export type GoalMetricJson = { kind: string } & Record<string, unknown>;
+
 // One plan-target change caused by a session, persisted on workout_sessions.plan_updates
 // and surfaced as the "Plan updated" banner on a session's detail / compare view.
 export type PlanTargetChange = {
@@ -156,6 +166,24 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['cardio_entries']['Insert']>;
         Relationships: [];
       };
+      goals: {
+        Row: { id: string; user_id: string; section: GoalSection; title: string; description: string | null; unit: string | null; start_value: number | null; target_value: number | null; direction: GoalDirection; source: GoalSource; metric: GoalMetricJson | null; status: GoalStatus; achieved_at: string | null; deadline: string | null; pinned: boolean; position: number; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; section: GoalSection; title: string; description?: string | null; unit?: string | null; start_value?: number | null; target_value?: number | null; direction?: GoalDirection; source?: GoalSource; metric?: GoalMetricJson | null; status?: GoalStatus; achieved_at?: string | null; deadline?: string | null; pinned?: boolean; position?: number; created_at?: string; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['goals']['Insert']>;
+        Relationships: [];
+      };
+      goal_milestones: {
+        Row: { id: string; user_id: string; goal_id: string; label: string | null; value: number | null; position: number; completed: boolean; first_hit_at: string | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; goal_id: string; label?: string | null; value?: number | null; position?: number; completed?: boolean; first_hit_at?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['goal_milestones']['Insert']>;
+        Relationships: [];
+      };
+      goal_checkins: {
+        Row: { id: string; user_id: string; goal_id: string; value: number; recorded_at: string; note: string | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; goal_id: string; value: number; recorded_at?: string; note?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['goal_checkins']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -163,6 +191,10 @@ export interface Database {
       roadmap_status: RoadmapStatus;
       priority: Priority;
       ai_section: AiSection;
+      goal_section: GoalSection;
+      goal_status: GoalStatus;
+      goal_source: GoalSource;
+      goal_direction: GoalDirection;
     };
     CompositeTypes: Record<string, never>;
   };
@@ -193,3 +225,6 @@ export type TodoPin = Tables<'todo_pins'>;
 export type Todo = Tables<'todos'>;
 export type CardioSession = Tables<'cardio_sessions'>;
 export type CardioEntry = Tables<'cardio_entries'>;
+export type Goal = Tables<'goals'>;
+export type GoalMilestone = Tables<'goal_milestones'>;
+export type GoalCheckin = Tables<'goal_checkins'>;

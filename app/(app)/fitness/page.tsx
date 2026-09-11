@@ -6,6 +6,8 @@ import { StatTile } from '@/components/ui/StatTile';
 import { CountUp } from '@/components/ui/CountUp';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { createClient } from '@/lib/supabase/server';
+import { GoalStrip } from '@/features/goals/GoalStrip';
+import { listResolvedGoals } from '@/lib/queries/goals';
 import { FitnessOverviewPreview } from '@/features/fitness/FitnessOverviewPreview';
 import { PlanListPreview } from '@/features/fitness/PlanListPreview';
 import { PinnedLifts } from '@/features/fitness/PinnedLifts';
@@ -45,12 +47,13 @@ async function getRecentExerciseNames(count = 5): Promise<string[]> {
 
 export default async function FitnessPage() {
   const supabase = await createClient();
-  const [recentExercises, pinnedLifts, hubMetrics, programmeDays] = await Promise.all([
+  const [recentExercises, pinnedLifts, hubMetrics, programmeDays, goals] = await Promise.all([
     getRecentExerciseNames(),
     getPinnedLiftTrends(supabase).catch(() => []),
     getFitnessHubMetrics(supabase).catch(() => null),
     // Degrades to nothing if migration 0015 hasn't been applied yet.
     listProgrammeDays(supabase).catch(() => []),
+    listResolvedGoals(supabase, { section: 'fitness', status: 'active' }).catch(() => []),
   ]);
 
   const bestE1rm = pinnedLifts.length > 0
@@ -62,6 +65,8 @@ export default async function FitnessPage() {
       <PageHeader title="Fitness" description="Push / Pull / Legs — strength focus." />
 
       {programmeDays.length > 0 && <WeekProgramme days={programmeDays} />}
+
+      <GoalStrip goals={goals} />
 
       {/* KPI strip */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

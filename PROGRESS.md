@@ -6,6 +6,61 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 
 ## ▶ NEXT STEP
 
+**Goals — SHIPPED (2026-09-11).** A goal is a target with ordered milestones and a progress
+bar. `/goals` (new SideNav entry) plus a read-only strip on each of the three hubs.
+
+- **Migration `0017_goals.sql` is APPLIED.** `goals` · `goal_milestones` · `goal_checkins`,
+  four enums, owner-only RLS, `goals_auto_needs_metric` check.
+- **Auto goals resolve ON READ.** `resolveMetric()` in `lib/queries/goals.ts` is the only code
+  that reaches into fitness/school/work data for a goal. **No write-back hooks** in
+  `sessions.ts` / `school.ts` / `work.ts` / `plans.ts` — the feature is purely additive, and a
+  goal created today backfills its milestone dates out of history.
+- **One shape for every metric:** a time-ordered `Observation[]` plus a mode (`peak` = running
+  best, `cumulative` = running total). Headline value, milestone hit dates and the trend all
+  derive from that array, so a new metric kind is one query. Catalog = **21 kinds** (12 fitness,
+  6 school, 3 work) in `GOAL_METRICS`, each declaring the args the picker collects. Fixed list
+  by design, not a query builder. `work_metric_value` / `work_metric_total` read any label in
+  `work_metrics` — the escape hatch for anything the schema can't otherwise answer.
+- **Progress rule (both modes): the fill reaches the furthest point you have ever been** — your
+  `best`, or the furthest cleared milestone. Milestones with values draw to scale between
+  `start` and `target`; a tick-only set falls back to evenly spaced count mode. Cleared never
+  un-clears; when `current` sits behind the fill a hollow marker shows where you actually are.
+- **`GoalBar` takes BOTH `current` and `best`.** ⚠️ It originally took only `current`, which
+  silently disagreed with the server whenever the latest session was below the all-time best
+  (a best landing *between* two milestones is invisible to the notches). `goalPercent()` and
+  `percentOf()` are now proven to agree — there is a regression case for exactly this.
+- **Four sections:** fitness · school · work · **life** (life renders only on `/goals`, and
+  borrows the home accent since it has no theme of its own).
+- **`[data-theme]` blocks are nestable** (`globals.css`). They previously set only
+  `--accent-rgb`, but `--accent`/`--accent-soft` are *declared* at `:root`, and a custom property
+  resolves where it is declared — so a nested theme did nothing (hence `AppShell` stamping
+  `documentElement`). Each block now re-declares both derived tokens, and `[data-theme='home']`
+  was added. **This is what lets `/goals` show fitness red, school teal and work graphite on one
+  page**, and it is the way to theme any subtree from now on.
+
+Files: `lib/queries/goals.ts` (catalog · resolver · CRUD · `listMetricOptions`) ·
+`components/ui/GoalBar.tsx` · `features/goals/{GoalCard,GoalStrip,GoalForm,GoalsBoard}.tsx` ·
+`app/(app)/goals/page.tsx` (RSC — resolution happens server-side; mutations write straight to
+Supabase then `router.refresh()`) · hub strips wired into `fitness/school/work/page.tsx` ·
+`components/layout/nav-items.ts`.
+
+**Decisions taken as defaults (not explicitly confirmed):** `deadline` is stored always but only
+rendered once set (then shows "12d left" / "3d late"); the hub strip shows **all active** goals
+for its section, ordered nearest-to-done, capped at 6 with a "+N more" link (not pinned-only).
+
+**Verified:** `tsc` · `eslint` · `npm run build` clean. 25 assertions over the resolver's pure
+functions (peak + slip, cumulative, direction-down, count mode, stored-tick floor, running
+max/min/sum, and the best-between-milestones regression) all pass. End-to-end in the browser: an
+auto goal bound to a real exercise resolved **32 kg current / 34 kg best → 70%** off his own
+`session_sets`, auto-cleared the 25 and 30 milestones, and the create/edit/delete paths all work.
+The test goal was deleted afterwards.
+
+**Still open (his call):** whether the per-notch captions (`45 · 50 · 55`) earn their space, and
+whether the **work** section's graphite accent makes a work goal's bar read as *disabled* rather
+than *progressing* — a progress bar is the first real value-carrying element in that section.
+`app/(app)/goals/preview/page.tsx` is the **SANDBOX** kept for judging those two; delete it once
+they're settled.
+
 **Design language replaced (2026-09-09) — "lit instrument".** The grey-card era is over.
 Full spec in `DESIGN_GUIDE.md` §0; the token layer is `app/globals.css`.
 
@@ -264,20 +319,11 @@ without a migration: toggle the chips at `/fitness/programme`.
     the blue budget and stay constant across section themes (fitness is red, so heavy could not
     just reuse `--accent`).
 
-**Applied (2026-09-08):** `0015_programme.sql` and `0016_programme_plan_autolink.sql` are live in
-Supabase. `0016` is re-runnable — execute it again after adding new plans to link any programme
-day still showing "Link a plan".
-
-**Pending manual actions:** apply migrations `0006_exercise_pins.sql`, `0009_journal_weeks.sql`,
-`0010_todos.sql`, `0011_session_set_plan_link.sql`, `0012_plan_progress.sql`,
-`0013_cardio.sql`, and `0014_work_boards.sql` to Supabase (`supabase db push` / SQL editor).
-Until `0014` is applied, the Work page's Kanban will error on load (`roadmap_cards.board_id` /
-`work_boards` don't exist yet). Until `0013` is applied, the
-cardio logging page will error on save (tables don't exist yet). Until `0012` is applied, plan
-auto-progression degrades (the new `base_*` / `plan_updates` columns are missing, so queries error
-and no banner shows). Until `0010` is applied, the todo widget/review degrade gracefully (queries
-catch errors → empty state). Until `0009` is applied, the journal widget + review degrade
-gracefully to a "no summaries / caught up" state.
+**Migrations: all applied.** Every migration `0001`–`0016` is live in Supabase (confirmed
+2026-09-11). The old "pending manual actions" backlog is gone — assume the schema in
+`supabase/migrations/` matches the database. `0016_programme_plan_autolink.sql` is still
+re-runnable: execute it again after adding new plans to link any programme day showing
+"Link a plan".
 
 ---
 

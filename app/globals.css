@@ -131,9 +131,30 @@
   --glow-strength: 0.40;
 }
 
+/* Home — indigo. Mirrors the :root default so the theme can also be nested. */
+[data-theme='home'] {
+  --accent-rgb: 99, 102, 241;
+  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
+   * a custom property is substituted where it is DECLARED, so a child that only
+   * swaps the triplet would keep :root's already-resolved --accent. */
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #c7d2fe;
+  --chart-2: #a5b4fc;
+  --chart-3: #818cf8;
+  --chart-4: #6366f1;
+  --chart-5: #4f46e5;
+  --chart-6: #4338ca;
+}
+
 /* Fitness — red. */
 [data-theme='fitness'] {
   --accent-rgb: 239, 68, 68;
+  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
+   * a custom property is substituted where it is DECLARED, so a child that only
+   * swaps the triplet would keep :root's already-resolved --accent. */
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
   --chart-1: #fecaca;
   --chart-2: #fca5a5;
   --chart-3: #f87171;
@@ -145,6 +166,11 @@
 /* School — teal. */
 [data-theme='school'] {
   --accent-rgb: 20, 184, 166;
+  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
+   * a custom property is substituted where it is DECLARED, so a child that only
+   * swaps the triplet would keep :root's already-resolved --accent. */
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
   --chart-1: #99f6e4;
   --chart-2: #5eead4;
   --chart-3: #2dd4bf;
@@ -156,6 +182,11 @@
 /* Work — graphite / slate. */
 [data-theme='work'] {
   --accent-rgb: 148, 163, 184;
+  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
+   * a custom property is substituted where it is DECLARED, so a child that only
+   * swaps the triplet would keep :root's already-resolved --accent. */
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
   --chart-1: #e2e8f0;
   --chart-2: #cbd5e1;
   --chart-3: #94a3b8;
@@ -636,6 +667,27 @@ h2 {
 }
 .press-flash:active {
   animation: press-flash 0.4s var(--ease-out-quint);
+}
+
+/* Goal unlock — the one-shot flare on a milestone notch the moment it clears.
+ * The notch is a 2px rule, so the flare has to come from light around it rather
+ * than from the mark growing. Used by components/ui/GoalBar.tsx. */
+@keyframes goal-unlock {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.55);
+    transform: scaleY(1);
+  }
+  35% {
+    box-shadow: 0 0 14px 3px rgba(var(--accent-rgb), 0.5);
+    transform: scaleY(1.9);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0);
+    transform: scaleY(1);
+  }
+}
+.goal-unlock {
+  animation: goal-unlock 0.7s var(--ease-out-quint);
 }
 
 /* App-native scrollbar — thin, rounded, matches the neutral palette. */

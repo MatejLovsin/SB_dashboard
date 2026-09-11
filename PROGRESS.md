@@ -58,8 +58,16 @@ The test goal was deleted afterwards.
 **Still open (his call):** whether the per-notch captions (`45 · 50 · 55`) earn their space, and
 whether the **work** section's graphite accent makes a work goal's bar read as *disabled* rather
 than *progressing* — a progress bar is the first real value-carrying element in that section.
-`app/(app)/goals/preview/page.tsx` is the **SANDBOX** kept for judging those two; delete it once
-they're settled.
+Both are now judged on the live `/goals` page; the `/goals/preview` sandbox has been deleted.
+
+**Also open:** manual **check-ins have a backend but no UI** — `goal_checkins`, `addCheckin` and
+`listCheckins` are built and tested, but nothing in `GoalForm` logs one, so a manual *numeric*
+goal can currently only move its bar by ticking milestones. Closest gap to fill.
+`workout_streak_weeks` is the one metric whose series is synthesised week-by-week rather than
+read from rows, so it is the likeliest to be subtly wrong; it has not been checked against real
+data. Only `exercise_best_weight` was exercised end-to-end against live rows — the other 20 kinds
+are typechecked and share the same shape, but the school and work ones deserve a sanity check the
+first time a goal binds to them.
 
 **Design language replaced (2026-09-09) — "lit instrument".** The grey-card era is over.
 Full spec in `DESIGN_GUIDE.md` §0; the token layer is `app/globals.css`.

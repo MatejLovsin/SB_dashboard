@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Subject, Exam, StudySession, DiscardedStudySession } from '@/lib/db/types';
 import { mondayOf } from '@/lib/utils/stats';
+import { resolveAttempts, countedExams, type AttemptInfo } from '@/lib/utils/grades';
 
 type Client = SupabaseClient<Database>;
 
@@ -38,9 +39,15 @@ export type ExamInput = {
   perceived_difficulty?: number | null;
   grade?: number | null;
   target_study_hours?: number | null;
+  /** Id of the attempt this exam re-sits. See lib/utils/grades.ts. */
+  retake_of?: string | null;
 };
 
-export type ExamWithSubject = Exam & { subject: Pick<Subject, 'name' | 'color'> | null };
+export type ExamWithSubject = Exam & {
+  subject: Pick<Subject, 'name' | 'color'> | null;
+  /** Where this exam sits in its retake chain, and whether its grade counts. */
+  attempt: AttemptInfo;
+};
 export type ExamWithProgress = ExamWithSubject & { studySeconds: number };
 
 // --- Subject CRUD ---
@@ -90,12 +97,19 @@ export async function listExams(
   client: Client,
   opts?: { upcoming?: boolean },
 ): Promise<ExamWithSubject[]> {
-  let q = client.from('exams').select('*').order('exam_date', { ascending: true });
-  if (opts?.upcoming) q = q.gte('exam_date', new Date().toISOString().slice(0, 10));
-  const { data: rows, error: examsError } = await q;
+  // Always read the whole table, even for `upcoming`: attempt numbering needs the
+  // earlier sittings a date filter would cut away. Single-user scale — it's cheap.
+  const { data: rows, error: examsError } = await client
+    .from('exams')
+    .select('*')
+    .order('exam_date', { ascending: true });
   if (examsError) throw examsError;
 
-  const exams = rows ?? [];
+  const all = rows ?? [];
+  const attempts = resolveAttempts(all);
+  const exams = opts?.upcoming
+    ? all.filter((e) => e.exam_date >= new Date().toISOString().slice(0, 10))
+    : all;
   if (exams.length === 0) return [];
 
   const subjectIds = [...new Set(exams.map((e) => e.subject_id))];
@@ -106,7 +120,11 @@ export async function listExams(
   if (subjectsError) throw subjectsError;
 
   const subMap = new Map((subjects ?? []).map((s) => [s.id, { name: s.name, color: s.color }]));
-  return exams.map((exam) => ({ ...exam, subject: subMap.get(exam.subject_id) ?? null }));
+  return exams.map((exam) => ({
+    ...exam,
+    subject: subMap.get(exam.subject_id) ?? null,
+    attempt: attempts.get(exam.id)!,
+  }));
 }
 
 export async function createExam(client: Client, input: ExamInput): Promise<Exam> {
@@ -119,6 +137,7 @@ export async function createExam(client: Client, input: ExamInput): Promise<Exam
       perceived_difficulty: input.perceived_difficulty ?? null,
       grade: input.grade ?? null,
       target_study_hours: input.target_study_hours ?? null,
+      retake_of: input.retake_of ?? null,
     })
     .select('*')
     .single();
@@ -139,6 +158,7 @@ export async function updateExam(
   if (patch.perceived_difficulty !== undefined) update.perceived_difficulty = patch.perceived_difficulty;
   if (patch.grade !== undefined) update.grade = patch.grade;
   if (patch.target_study_hours !== undefined) update.target_study_hours = patch.target_study_hours;
+  if (patch.retake_of !== undefined) update.retake_of = patch.retake_of;
   const { data, error } = await client
     .from('exams')
     .update(update)
@@ -220,17 +240,29 @@ export type GradedExamPoint = {
   difficulty: number | null;
   hoursStudied: number;
   targetHours: number | null;
+  /** Position of the counted sitting within its chain, and the chain's length. */
+  attempt: number;
+  attempts: number;
 };
 
+/**
+ * Every grade that counts, newest last — one point per retake chain (the best
+ * passing attempt), fails dropped. Hours are summed across the WHOLE chain, so a
+ * grade earned on the second sitting carries the study time both sittings took;
+ * otherwise the hours-to-grade model learns from a number that was never true.
+ */
 export async function listGradedExamsWithStudyHours(client: Client): Promise<GradedExamPoint[]> {
   const { data: rows, error: examsError } = await client
     .from('exams')
     .select('*')
-    .not('grade', 'is', null)
     .order('exam_date', { ascending: true });
   if (examsError) throw examsError;
 
-  const exams = rows ?? [];
+  const all = rows ?? [];
+  if (all.length === 0) return [];
+
+  const attempts = resolveAttempts(all);
+  const exams = countedExams(all);
   if (exams.length === 0) return [];
 
   const subjectIds = [...new Set(exams.map((e) => e.subject_id))];
@@ -241,11 +273,19 @@ export async function listGradedExamsWithStudyHours(client: Client): Promise<Gra
   if (subjectsError) throw subjectsError;
 
   const subMap = new Map((subjects ?? []).map((s) => [s.id, { name: s.name, color: s.color }]));
-  const studyMap = await getStudySecondsForExams(client, exams.map((e) => e.id));
+  const studyMap = await getStudySecondsForExams(client, all.map((e) => e.id));
+
+  // Study seconds rolled up per chain, then read back by the counted attempt.
+  const chainSeconds = new Map<string, number>();
+  for (const exam of all) {
+    const chainId = attempts.get(exam.id)!.chainId;
+    chainSeconds.set(chainId, (chainSeconds.get(chainId) ?? 0) + (studyMap.get(exam.id) ?? 0));
+  }
 
   return exams.map((exam) => {
     const subject = subMap.get(exam.subject_id);
-    const seconds = studyMap.get(exam.id) ?? 0;
+    const info = attempts.get(exam.id)!;
+    const seconds = chainSeconds.get(info.chainId) ?? 0;
     return {
       id: exam.id,
       subjectId: exam.subject_id,
@@ -257,6 +297,8 @@ export async function listGradedExamsWithStudyHours(client: Client): Promise<Gra
       difficulty: exam.perceived_difficulty,
       hoursStudied: Math.round((seconds / 3600) * 10) / 10,
       targetHours: exam.target_study_hours,
+      attempt: info.attempt,
+      attempts: info.attempts,
     };
   });
 }

@@ -26,6 +26,7 @@ import type {
   GoalStatus,
 } from '@/lib/db/types';
 import { estimatedOneRepMax, mondayOf } from '@/lib/utils/stats';
+import { countedExams, resolveAttempts } from '@/lib/utils/grades';
 import type { Client } from './fitness';
 
 export const goalKeys = {
@@ -385,15 +386,24 @@ async function cardioEntries(client: Client, cache: Memo, activity?: string | nu
   return rows.filter((r) => r.activity.toLowerCase() === want);
 }
 
-async function gradedExams(client: Client, cache: Memo) {
+/** Raw exam rows — only the retake-chain walk should use these directly. */
+async function allExams(client: Client, cache: Memo) {
   return memo(cache, 'exams', async () => {
     const { data, error } = await client
       .from('exams')
-      .select('id, subject_id, grade, exam_date')
-      .not('grade', 'is', null);
+      .select('id, subject_id, grade, exam_date, retake_of');
     if (error) throw error;
     return data ?? [];
   });
+}
+
+/**
+ * Graded exams filtered to THE GRADES THAT COUNT — best passing attempt per
+ * retake chain, fails dropped (lib/utils/grades.ts). A goal must see exactly what
+ * the school pages see, so no grade metric may aggregate the raw table.
+ */
+async function gradedExams(client: Client, cache: Memo) {
+  return countedExams(await allExams(client, cache));
 }
 
 /** Running average of a chronological series — the shape a grade goal wants. */
@@ -528,8 +538,12 @@ export async function resolveMetric(
     }
 
     case 'exam_grade': {
-      const exams = await gradedExams(client, cache);
-      const exam = exams.find((e) => e.id === metric.examId);
+      // Follows the retake chain: a goal bound to the first sitting keeps
+      // tracking that exam, so passing it on the second attempt moves the bar.
+      const all = await allExams(client, cache);
+      const attempts = resolveAttempts(all);
+      const countedId = attempts.get(metric.examId)?.countedId;
+      const exam = countedId ? all.find((e) => e.id === countedId) : undefined;
       return {
         mode,
         series: exam?.grade != null ? [{ at: exam.exam_date, value: exam.grade }] : [],

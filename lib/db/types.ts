@@ -83,8 +83,8 @@ export interface Database {
         Relationships: [];
       };
       exams: {
-        Row: { id: string; user_id: string; subject_id: string; title: string | null; exam_date: string; perceived_difficulty: number | null; grade: number | null; target_study_hours: number | null; updated_at: string } & Timestamps;
-        Insert: { id?: string; user_id?: string; subject_id: string; title?: string | null; exam_date: string; perceived_difficulty?: number | null; grade?: number | null; target_study_hours?: number | null; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; subject_id: string; title: string | null; exam_date: string; perceived_difficulty: number | null; grade: number | null; target_study_hours: number | null; retake_of: string | null; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; subject_id: string; title?: string | null; exam_date: string; perceived_difficulty?: number | null; grade?: number | null; target_study_hours?: number | null; retake_of?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['exams']['Insert']>;
         Relationships: [];
       };

@@ -22,7 +22,7 @@ export default async function SchoolInsightsPage() {
       </Link>
       <PageHeader
         title="Grade Insights"
-        description="How study time and difficulty relate to your results."
+        description="How study time and difficulty relate to your results. Counts one grade per exam — your best passing attempt — with fails and superseded sittings left out."
       />
       <GradeInsights points={points} subjects={subjects.map((s) => ({ id: s.id, name: s.name }))} />
     </div>

@@ -101,6 +101,7 @@ export function ExamList() {
         <Card>
           <ExamForm
             subjects={subjects}
+            exams={exams}
             onSubmit={(i) => addMut.mutate(i)}
             onCancel={() => setAdding(false)}
             isPending={addMut.isPending}
@@ -112,6 +113,8 @@ export function ExamList() {
         <Card>
           <ExamForm
             subjects={subjects}
+            exams={exams}
+            examId={editingId}
             initial={editingExam}
             onSubmit={(patch) => editMut.mutate({ id: editingId, patch })}
             onCancel={() => setEditingId(null)}
@@ -172,6 +175,7 @@ export function ExamList() {
           <ExamDetail
             exam={displayExam}
             studySeconds={studyMap?.get(displayExam.id) ?? 0}
+            chain={exams.filter((e) => e.attempt.chainId === displayExam.attempt.chainId)}
             onSaveGrade={(grade) => gradeMut.mutate({ id: displayExam.id, grade })}
             isSavingGrade={gradeMut.isPending && gradeMut.variables?.id === displayExam.id}
           />

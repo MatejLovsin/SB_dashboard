@@ -15,14 +15,18 @@ import { Button } from '@/components/ui/Button';
 export function ExamDetail({
   exam,
   studySeconds,
+  chain = [],
   onSaveGrade,
   isSavingGrade,
 }: {
   exam: ExamWithSubject;
   studySeconds: number;
+  /** Every sitting of this exam, this one included, oldest first. */
+  chain?: ExamWithSubject[];
   onSaveGrade?: (grade: number | null) => void;
   isSavingGrade?: boolean;
 }) {
+  const attempt = exam.attempt;
   const days = daysUntil(exam.exam_date);
   const isUpcoming = days >= 0;
   const [editingGrade, setEditingGrade] = useState(false);
@@ -100,7 +104,10 @@ export function ExamDetail({
         ) : (
           <div className="flex items-center gap-2">
             {exam.grade != null ? (
-              <span className="font-medium text-foreground/80">Grade: {exam.grade}%</span>
+              <span className={attempt.counts ? 'font-medium text-foreground/80' : 'text-muted'}>
+                Grade: <span className={attempt.counts ? '' : 'line-through'}>{exam.grade}%</span>
+                {!attempt.counts && (attempt.passed ? ' · superseded' : ' · failed, not counted')}
+              </span>
             ) : (
               <span className="italic text-muted">No grade recorded</span>
             )}
@@ -112,6 +119,42 @@ export function ExamDetail({
           </div>
         )}
       </div>
+
+      {/* Retake chain — only the best passing attempt reaches an average */}
+      {attempt.attempts > 1 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted uppercase tracking-wide">
+            Attempt {attempt.attempt} of {attempt.attempts}
+          </p>
+          <ol className="space-y-1 text-sm">
+            {chain.map((sitting) => (
+              <li
+                key={sitting.id}
+                className={`flex items-center justify-between gap-3 ${
+                  sitting.id === exam.id ? 'text-foreground/80' : 'text-muted'
+                }`}
+              >
+                <span>
+                  {new Date(sitting.exam_date + 'T00:00:00').toLocaleDateString(undefined, {
+                    month: 'short', day: 'numeric', year: 'numeric',
+                  })}
+                  {sitting.id === exam.id && ' · this one'}
+                </span>
+                <span className={sitting.attempt.counts ? 'font-medium' : ''}>
+                  {sitting.grade != null ? (
+                    <span className={sitting.attempt.counts ? '' : 'line-through'}>
+                      {sitting.grade}%
+                    </span>
+                  ) : (
+                    <span className="italic">no grade</span>
+                  )}
+                  {sitting.attempt.counts && ' · counts'}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Perceived difficulty — 5 dots */}
       {exam.perceived_difficulty != null && (

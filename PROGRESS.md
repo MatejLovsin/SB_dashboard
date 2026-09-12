@@ -6,6 +6,54 @@ Full session history and gotchas live in `PROGRESS_ARCHIVE.md` — only open it 
 
 ## ▶ NEXT STEP
 
+**Exam retakes — SHIPPED (2026-09-12). Migration `0018_exam_retakes.sql` is APPLIED.**
+
+The problem: failed sittings were dragging the average down, which made a grade-average goal
+impossible and didn't match how college actually counts. Two rules now decide which grades are
+real, and **`lib/utils/grades.ts` is the only place either is expressed** — every average, chart
+and goal metric goes through it, so they cannot drift apart:
+
+1. **A failing grade never counts** (`PASS_MARK = 50`, grades are percentages) — retaken or not,
+   because a failed exam isn't in a transcript average either.
+2. **`exams.retake_of` links attempts into a chain, and a chain contributes exactly one grade:
+   the highest passing attempt** (earliest on a tie). That covers re-sitting a fail *and*
+   retaking a pass you weren't happy with — a plain "doesn't count" flag could only do the first,
+   and would be bookkeeping to keep in sync by hand.
+
+Nothing is hidden or deleted: a superseded/failed sitting still renders, struck through, tagged
+`superseded` / `failed`, with `attempt 2 of 3` under the title and the full chain listed in the
+detail overlay.
+
+- `resolveAttempts()` returns `{chainId, attempt, attempts, passed, counts, countedId}` per exam;
+  `countedExams()` is the filter every aggregate uses; `descendantsOf()` keeps the form from
+  offering a retake target that would close a loop. The walk is depth-capped and cycle-safe (a
+  cycle collapses to its lowest id rather than splintering into one chain per starting point).
+- `ExamWithSubject` now carries `attempt`, so any consumer of `listExams` gets it for free.
+  `listExams` reads the whole table even for `upcoming` — attempt numbering needs the earlier
+  sittings a date filter would cut away.
+- `listGradedExamsWithStudyHours` returns **only counted grades**, and sums study hours across the
+  WHOLE chain, so the hours→grade model no longer learns from "40h → fail" as a separate point.
+- Goals: `gradedExams()` in `lib/queries/goals.ts` is filtered through `countedExams`, so
+  `subject_avg_grade` / `overall_avg_grade` / `subject_best_grade` all changed value. `exam_grade`
+  **follows the chain** — a goal bound to the first sitting moves when the retake passes.
+
+Files: `lib/utils/grades.ts` (new) · `supabase/migrations/0018_exam_retakes.sql` ·
+`lib/queries/school.ts` · `lib/queries/goals.ts` · `features/school/{ExamForm,ExamCard,ExamDetail,ExamList}.tsx`
+· `app/(app)/school/insights/page.tsx`.
+
+**Verified:** `tsc` · `npm run build` clean, `eslint` unchanged from baseline (73 pre-existing
+errors, none in the new code). 18 cases over the pure logic — fail/pass/improved-pass chains,
+three-deep chains, ungraded retake, ties, branching chains, dangling parent, cycles, and the
+worked average — all pass; the script is in the session scratchpad, not the repo (no test runner
+here yet). **Not yet exercised against live rows** — link one real retake on `/school/exams` and
+confirm the average and any grade goal move the way you expect.
+
+**Open:** grades are percentages with a pass at 50, both hardcoded in `grades.ts`; if a subject
+ever grades on another scale this becomes a setting. There is no "show superseded attempts"
+filter on the past-exams tab — every sitting is listed.
+
+---
+
 **Goals — SHIPPED (2026-09-11).** A goal is a target with ordered milestones and a progress
 bar. `/goals` (new SideNav entry) plus a read-only strip on each of the three hubs.
 

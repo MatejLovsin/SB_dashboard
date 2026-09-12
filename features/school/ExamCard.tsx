@@ -14,6 +14,7 @@ interface Props {
 }
 
 export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, onOpen, isDeleting }: Props) {
+  const attempt = exam.attempt;
   const days = daysUntil(exam.exam_date);
   const isUpcoming = days >= 0;
   const progress = exam.target_study_hours
@@ -44,9 +45,15 @@ export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, onOpen, isD
           <p className="truncate text-sm font-medium leading-tight">
             {exam.title ?? exam.subject?.name ?? 'Exam'}
           </p>
-          {exam.subject && (
-            <p className="mt-0.5 text-xs text-muted">{exam.subject.name}</p>
-          )}
+          <p className="mt-0.5 text-xs text-muted">
+            {exam.subject?.name}
+            {attempt.attempts > 1 && (
+              <>
+                {exam.subject && ' · '}
+                attempt {attempt.attempt} of {attempt.attempts}
+              </>
+            )}
+          </p>
         </div>
         <div className="flex shrink-0 gap-1">
           <Button
@@ -81,9 +88,21 @@ export function ExamCard({ exam, studySeconds = 0, onEdit, onDelete, onOpen, isD
             {days === 0 ? 'Today!' : `${days}d left`}
           </span>
         ) : (
-          exam.grade != null
-            ? <span className="font-medium">{exam.grade}%</span>
-            : <span className="italic">no grade</span>
+          exam.grade != null ? (
+            attempt.counts ? (
+              <span className="font-medium">{exam.grade}%</span>
+            ) : (
+              // Kept on screen, kept out of every average — see lib/utils/grades.ts.
+              <span className="flex items-center gap-1.5">
+                <span className="line-through">{exam.grade}%</span>
+                <span className="uppercase tracking-wide text-[0.625rem]">
+                  {attempt.passed ? 'superseded' : 'failed'}
+                </span>
+              </span>
+            )
+          ) : (
+            <span className="italic">no grade</span>
+          )
         )}
       </div>
 

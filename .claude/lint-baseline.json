@@ -1,0 +1,214 @@
+{
+  "comment": "Accepted ESLint debt, per file per rule. Counts may fall, never rise. Lower with: npm run lint:ratchet",
+  "total": 171,
+  "files": {
+    "app/(app)/fitness/page.tsx": {
+      "max-lines-per-function": 1
+    },
+    "app/(app)/page.tsx": {
+      "max-lines-per-function": 1
+    },
+    "app/(app)/school/page.tsx": {
+      "max-lines-per-function": 1
+    },
+    "app/(app)/school/subjects/[id]/page.tsx": {
+      "@typescript-eslint/no-unused-vars": 2
+    },
+    "app/(app)/work/notes/page.tsx": {
+      "@typescript-eslint/no-unused-vars": 1
+    },
+    "app/(app)/work/page.tsx": {
+      "@typescript-eslint/no-unused-vars": 1,
+      "max-lines-per-function": 1
+    },
+    "components/charts/ScatterTrend.tsx": {
+      "no-restricted-syntax": 2
+    },
+    "components/ui/FocusOverlay.tsx": {
+      "max-lines-per-function": 1
+    },
+    "components/ui/GoalBar.tsx": {
+      "max-lines-per-function": 1
+    },
+    "components/ui/MarkdownEditor.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 2
+    },
+    "features/fitness/ActiveSession.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/CardioLogger.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 1
+    },
+    "features/fitness/CardioSessionEditor.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/exhaustive-deps": 1,
+      "react-hooks/set-state-in-effect": 1
+    },
+    "features/fitness/CardioSessionList.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 5
+    },
+    "features/fitness/ExerciseDetail.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/ExerciseLibrary.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/ExerciseManager.tsx": {
+      "max-lines-per-function": 2
+    },
+    "features/fitness/ExercisePicker.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/FitnessOverview.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/purity": 1
+    },
+    "features/fitness/FitnessOverviewPreview.tsx": {
+      "@typescript-eslint/no-unused-vars": 1,
+      "max-lines-per-function": 1
+    },
+    "features/fitness/FitnessSessionDetail.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/PlanEditor.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/PlanList.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/ProgrammeEditor.tsx": {
+      "max-lines-per-function": 2,
+      "react-hooks/set-state-in-effect": 1
+    },
+    "features/fitness/SessionCompare.tsx": {
+      "@typescript-eslint/no-non-null-assertion": 1,
+      "max-lines-per-function": 1,
+      "react-hooks/set-state-in-effect": 1
+    },
+    "features/fitness/SessionEditor.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/exhaustive-deps": 1,
+      "react-hooks/set-state-in-effect": 1
+    },
+    "features/fitness/SessionList.tsx": {
+      "@typescript-eslint/no-non-null-assertion": 1,
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 7
+    },
+    "features/fitness/SessionRunner.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/fitness/WeekProgramme.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "features/goals/GoalForm.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/goals/GoalsBoard.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/journal/JournalReview.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 9
+    },
+    "features/school/DiscardedSessions.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/school/ExamCard.tsx": {
+      "@typescript-eslint/no-non-null-assertion": 1,
+      "max-lines-per-function": 1
+    },
+    "features/school/ExamDetail.tsx": {
+      "@typescript-eslint/no-non-null-assertion": 1,
+      "max-lines-per-function": 1
+    },
+    "features/school/ExamForm.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/school/ExamList.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 19
+    },
+    "features/school/GradeInsights.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/school/SessionHistory.tsx": {
+      "max-lines-per-function": 1,
+      "react-hooks/refs": 10
+    },
+    "features/school/StudyTimer.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/school/SubjectForm.tsx": {
+      "no-restricted-syntax": 8
+    },
+    "features/school/SubjectList.tsx": {
+      "max-lines-per-function": 1,
+      "no-restricted-syntax": 1
+    },
+    "features/todos/charts/CompletionBars.tsx": {
+      "no-restricted-syntax": 1
+    },
+    "features/todos/TodoDashboard.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/todos/TodoPlanner.tsx": {
+      "max-lines-per-function": 2
+    },
+    "features/todos/TodoReview.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/work/KanbanBoard.tsx": {
+      "@typescript-eslint/no-non-null-assertion": 11,
+      "max-lines-per-function": 3,
+      "react-hooks/refs": 9,
+      "react-hooks/set-state-in-effect": 1
+    },
+    "features/work/NoteList.tsx": {
+      "max-lines-per-function": 1
+    },
+    "features/work/WorkMetricLogger.tsx": {
+      "react/no-unescaped-entities": 1
+    },
+    "lib/hooks/useInView.ts": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "lib/hooks/useMountTransition.ts": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "lib/queries/analytics.ts": {
+      "@typescript-eslint/no-non-null-assertion": 2
+    },
+    "lib/queries/goals.ts": {
+      "max-lines-per-function": 1
+    },
+    "lib/queries/home.ts": {
+      "@typescript-eslint/no-unused-vars": 1,
+      "max-lines-per-function": 1
+    },
+    "lib/queries/journal.ts": {
+      "@typescript-eslint/no-non-null-assertion": 2
+    },
+    "lib/queries/plans.ts": {
+      "max-lines-per-function": 1
+    },
+    "lib/queries/school.ts": {
+      "@typescript-eslint/no-non-null-assertion": 3
+    },
+    "lib/supabase/client.ts": {
+      "@typescript-eslint/no-non-null-assertion": 2
+    },
+    "lib/supabase/middleware.ts": {
+      "@typescript-eslint/no-non-null-assertion": 2
+    },
+    "lib/supabase/server.ts": {
+      "@typescript-eslint/no-non-null-assertion": 2
+    },
+    "lib/utils/chartTheme.ts": {
+      "react-hooks/set-state-in-effect": 1
+    }
+  }
+}

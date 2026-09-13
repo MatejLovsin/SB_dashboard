@@ -1,0 +1,20 @@
+{
+  "comment": "Files grandfathered above the 300-line cap. Each may shrink, never grow. Lower with: npm run lines:ratchet",
+  "files": {
+    "lib/queries/goals.ts": 1132,
+    "app/globals.css": 732,
+    "features/work/KanbanBoard.tsx": 573,
+    "lib/queries/school.ts": 511,
+    "features/goals/GoalForm.tsx": 492,
+    "lib/queries/analytics.ts": 406,
+    "lib/queries/todos.ts": 389,
+    "components/ui/MarkdownEditor.tsx": 371,
+    "components/ui/GoalBar.tsx": 361,
+    "features/fitness/ProgrammeEditor.tsx": 349,
+    "features/journal/JournalReview.tsx": 333,
+    "DESIGN_GUIDE.md": 321,
+    "lib/queries/plans.ts": 320,
+    "features/fitness/SessionEditor.tsx": 314,
+    "lib/queries/cardio.ts": 313
+  }
+}

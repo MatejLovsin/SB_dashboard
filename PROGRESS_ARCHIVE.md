@@ -447,3 +447,52 @@ re-runnable: execute it again after adding new plans to link any programme day s
 "Link a plan".
 
 ---
+
+- [x] **Enforcement layer.** (2026-09-13) The rules in `AGENTS.md` are machine-checked rather than
+  requested — `.claude/hooks/lib/limits.mjs` and `scripts/` are the implementation. One command
+  validates everything: `npm run check`.
+
+- [x] **Goal checkpoint fixes.** (2026-09-15) Chased a report of checkpoints "disappearing" down to
+  two bugs, both rooted in the goal-editing form:
+  - **Mislabeled checkpoints.** `features/goals/GoalForm.tsx`'s milestone row had both the label
+    and value `<input>`s built on `inputClasses` (which bakes in `w-full`), then each added its own
+    conflicting width class (`flex-1` vs `w-24`). `w-full` won the cascade for the value input,
+    stretching it to ~520px and squashing the label input to ~30px right next to the remove
+    button — invisible enough to fat-finger text into by mistake. `GoalBar`'s caption logic
+    (`m.label ?? fmtGoalValue(m.value)`) then shows a truthy label *instead of* the number, so a
+    stray label silently overrode the correct value on display.
+  - **Permanent data loss.** Worse: that same cramped layout put the label field right next to the
+    "×" remove button, so a mis-click could drop a milestone row from the form entirely — and
+    `replaceMilestones` used to save by deleting *every* milestone for the goal and reinserting
+    whatever was currently in the form. Any row missing at save time was gone for good, including
+    its `first_hit_at` history. This is almost certainly what erased two already-cleared
+    checkpoints (32kg, 34kg) from a real auto goal — recovered by re-adding them (auto goals derive
+    "hit" live from history, so nothing was actually lost there; a manual goal would not have been
+    so lucky).
+  - **Fixes:** input width bug fixed (`w-24!` + `shrink-0` on the value field, `min-w-0 flex-1` on
+    the label). `replaceMilestones` (`lib/queries/goals.ts`) rewritten to diff by milestone `id`
+    instead of delete-and-reinsert: a row is deleted only if its `id` is missing from what's
+    submitted, an existing `id` is updated in place (leaving `completed`/`first_hit_at` untouched),
+    a row without an `id` is inserted fresh with a client-generated uuid. `GoalForm`/`GoalsBoard`
+    now thread `id` through the milestone row state to make this possible.
+  - **Also this session:** `GoalBar`'s pure layout math (the `geometry()` function and friends)
+    split into `components/ui/goalBarGeometry.ts` — the component file was pushing its line cap.
+    Cleared checkpoints now render muted + struck-through instead of accent-colored (they were
+    visually indistinguishable from the lit fill). Slipping back below your best now shades the
+    checkpoint tier you're actually sitting at (`bg-accent-soft`), distinct from ones you've since
+    moved past. The floating "now X" label that used to render directly on the bar (duplicating the
+    "Now X" text already under it on `/goals`, and overlapping the start/end labels on the narrow
+    hub-strip cards) was removed; `GoalStrip` gained its own "Now X" text line so the value appears
+    exactly once, consistently, on every page.
+  - **Hook gotcha:** `lib/queries/goals.ts` and `GoalForm.tsx` are CRLF-encoded (pre-existing,
+    Windows-authored). `.claude/hooks/check-write.mjs` does its own naive `string.includes()`
+    line-cap simulation against the raw file, using whatever line ending the edit's `old_string`
+    happens to use — an LF-based multi-line `old_string` silently fails to match a CRLF file, so
+    the hook falls back to reporting the file's *unchanged* size and can wrongly block a
+    size-reducing edit. Confirmed by testing the same string with `\n` (no match) vs `\r\n`
+    (match). Worked around by applying those specific edits with a one-off Node script that
+    preserves CRLF, then verified with the real `npm run lines` (not the hook) that the result was
+    genuinely under cap. If a multi-line edit to an old file gets blocked at a size that doesn't
+    match your own count, check the file's line endings before assuming your math is wrong.
+
+---

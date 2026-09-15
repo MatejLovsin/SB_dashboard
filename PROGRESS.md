@@ -10,9 +10,17 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
-**Enforcement layer — SHIPPED (2026-09-13).** The rules in `AGENTS.md` are now machine-checked
-rather than requests. See AGENTS.md for the short version; `.claude/hooks/lib/limits.mjs` and
-`scripts/` are the implementation. One command validates everything: `npm run check`.
+**Goal checkpoint fixes — SHIPPED (2026-09-15).** Fixed a real data-loss bug: `GoalForm`'s
+milestone label/value inputs fought over width (`w-full` vs `w-24`), squashing the label field to
+~30px right next to the remove button — easy to fat-finger, and since `replaceMilestones` used to
+delete-and-reinsert the whole milestone list on every save, a stray click there could silently
+delete a checkpoint for good. `replaceMilestones` now diffs by milestone `id` instead: only a row
+missing from the submitted list gets deleted, everything else is updated or inserted in place.
+Also: `GoalBar`'s layout math split into `components/ui/goalBarGeometry.ts` (it was pushing the
+line cap); cleared checkpoints now show muted + struck-through instead of fading into the fill
+color; slipping back below your best shades the checkpoint you're actually sitting at; the
+duplicate/overlapping "now" readouts on hub strips and goal cards collapsed to one place. See
+`PROGRESS_ARCHIVE.md` for the full writeup and a hook gotcha worth knowing about.
 
 The nearest product gap is **goal check-ins have a backend but no UI** — `goal_checkins`,
 `addCheckin` and `listCheckins` are built and tested, but nothing in `GoalForm` logs one, so a
@@ -47,7 +55,6 @@ manual *numeric* goal can only move its bar by ticking milestones.
   Legs and Lower, while `Dips` and `Row` are light only on Upper. This follows
   `full_programme_updated.svg` literally; unconfirmed whether the diagram is right or Lower was
   meant to mirror Upper. Fixable without a migration at `/fitness/programme`.
-- Whether the per-notch captions on a goal bar (`45 · 50 · 55`) earn their space.
 - Whether the work section's graphite accent makes a work goal's bar read as *disabled* rather
   than *progressing*.
 - Grades are percentages with a pass at 50, both hardcoded in `lib/utils/grades.ts`. If a subject

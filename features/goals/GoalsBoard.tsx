@@ -159,7 +159,7 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
             goal={editing.mode === 'edit' ? editing.goal.goal : undefined}
             milestones={
               editing.mode === 'edit'
-                ? editing.goal.milestones.map((m) => ({ label: m.label, value: m.value }))
+                ? editing.goal.milestones.map((m) => ({ id: m.id, label: m.label, value: m.value }))
                 : undefined
             }
             onSaved={closeAndRefresh}

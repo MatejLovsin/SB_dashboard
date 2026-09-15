@@ -961,6 +961,8 @@ export interface GoalInput {
 }
 
 export interface MilestoneInput {
+  /** Present when editing an existing milestone; omit to insert a new one. */
+  id?: string;
   label?: string | null;
   value?: number | null;
 }
@@ -1025,7 +1027,12 @@ export async function deleteGoal(client: Client, id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Milestones are edited as a set — simpler than diffing, and they're few. */
+/**
+ * Saves milestones as a diff against what's stored, keyed by id: a row absent
+ * from `milestones` was removed by the user and gets deleted; a row with an
+ * `id` is updated in place (leaving `completed` / `first_hit_at` alone); a row
+ * without one is inserted fresh.
+ */
 export async function replaceMilestones(
   client: Client,
   goalId: string,
@@ -1033,40 +1040,28 @@ export async function replaceMilestones(
 ): Promise<GoalMilestone[]> {
   const { data: existing, error: readError } = await client
     .from('goal_milestones')
-    .select('*')
+    .select('id')
     .eq('goal_id', goalId);
   if (readError) throw readError;
 
-  // Carry the clear-state across an edit: a milestone keeps its tick and its
-  // first_hit_at if its value (or label) still matches one that was there.
-  const previous = new Map(
-    (existing ?? []).map((m) => [`${m.value ?? ''}|${m.label ?? ''}`, m] as const),
-  );
-
-  const { error: deleteError } = await client
-    .from('goal_milestones')
-    .delete()
-    .eq('goal_id', goalId);
-  if (deleteError) throw deleteError;
-
+  const keptIds = new Set(milestones.map((m) => m.id).filter((id): id is string => id != null));
+  const removedIds = (existing ?? []).map((m) => m.id).filter((id) => !keptIds.has(id));
+  if (removedIds.length) {
+    const { error } = await client.from('goal_milestones').delete().in('id', removedIds);
+    if (error) throw error;
+  }
   if (!milestones.length) return [];
 
-  const { data, error } = await client
-    .from('goal_milestones')
-    .insert(
-      milestones.map((m, i) => {
-        const prior = previous.get(`${m.value ?? ''}|${m.label ?? ''}`);
-        return {
-          goal_id: goalId,
-          label: m.label ?? null,
-          value: m.value ?? null,
-          position: i,
-          completed: prior?.completed ?? false,
-          first_hit_at: prior?.first_hit_at ?? null,
-        };
-      }),
-    )
-    .select();
+  // A new milestone's id is generated here (not left to the db default) so
+  // every row in the batch shares the same columns.
+  const rows = milestones.map((m, i) => ({
+    id: m.id ?? crypto.randomUUID(),
+    goal_id: goalId,
+    label: m.label ?? null,
+    value: m.value ?? null,
+    position: i,
+  }));
+  const { data, error } = await client.from('goal_milestones').upsert(rows).select();
   if (error) throw error;
   return data ?? [];
 }

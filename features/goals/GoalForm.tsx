@@ -23,14 +23,14 @@ import type { Goal, GoalDirection, GoalSection } from '@/lib/db/types';
 
 interface GoalFormProps {
   options: MetricOptions;
-  /** Omit to create. */
-  goal?: Goal;
-  milestones?: Array<{ label: string | null; value: number | null }>;
+  goal?: Goal; // omit to create
+  milestones?: Array<{ id: string; label: string | null; value: number | null }>;
   onSaved: () => void;
   onCancel: () => void;
 }
 
 interface MilestoneRow {
+  id?: string; // present for an existing milestone; omit for one added this session
   label: string;
   value: string;
 }
@@ -83,7 +83,7 @@ export function GoalForm({ options, goal, milestones = [], onSaved, onCancel }: 
 
   const [rows, setRows] = useState<MilestoneRow[]>(
     milestones.length
-      ? milestones.map((m) => ({ label: m.label ?? '', value: m.value?.toString() ?? '' }))
+      ? milestones.map((m) => ({ id: m.id, label: m.label ?? '', value: m.value?.toString() ?? '' }))
       : [{ label: '', value: '' }],
   );
 
@@ -157,7 +157,7 @@ export function GoalForm({ options, goal, milestones = [], onSaved, onCancel }: 
 
     const cleaned = rows
       .filter((r) => r.label.trim() || r.value.trim())
-      .map((r) => ({ label: r.label.trim() || null, value: num(r.value) }));
+      .map((r) => ({ id: r.id, label: r.label.trim() || null, value: num(r.value) }));
 
     const payload = {
       section,
@@ -423,7 +423,7 @@ export function GoalForm({ options, goal, milestones = [], onSaved, onCancel }: 
                   setRows(rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)))
                 }
                 placeholder={`Step ${i + 1}`}
-                className={`${inputClasses} flex-1`}
+                className={`${inputClasses} min-w-0 flex-1`}
               />
               <input
                 value={row.value}
@@ -432,7 +432,7 @@ export function GoalForm({ options, goal, milestones = [], onSaved, onCancel }: 
                 }
                 placeholder="45"
                 inputMode="decimal"
-                className={`${inputClasses} w-24 text-center`}
+                className={`${inputClasses} w-24! shrink-0 text-center`}
               />
               <button
                 type="button"

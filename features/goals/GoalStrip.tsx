@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Target } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { GoalBar } from '@/components/ui/GoalBar';
+import { GoalBar, fmtGoalValue } from '@/components/ui/GoalBar';
 import type { ResolvedGoal } from '@/lib/queries/goals';
 
 const MAX_ON_HUB = 6;
@@ -40,7 +40,7 @@ export function GoalStrip({ goals }: GoalStripProps) {
       </div>
 
       <div className="no-scrollbar -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible">
-        {shown.map(({ goal, milestones, current, best, percent }) => (
+        {shown.map(({ goal, milestones, current, best, percent, achieved }) => (
           <Link
             key={goal.id}
             href="/goals"
@@ -61,6 +61,9 @@ export function GoalStrip({ goals }: GoalStripProps) {
                 direction={goal.direction}
                 size="strip"
               />
+              <p className="mt-1.5 truncate text-xs text-muted">
+                {achieved ? 'Done' : current != null ? `Now ${fmtGoalValue(current)} ${goal.unit ?? ''}`.trim() : ''}
+              </p>
             </Card>
           </Link>
         ))}

@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  fmtGoalValue,
+  geometry,
+  goalPercent,
+  type GoalBarMilestone,
+  type GoalDirection,
+  type Notch,
+} from './goalBarGeometry';
 
-export type GoalDirection = 'up' | 'down';
-
-export interface GoalBarMilestone {
-  id: string;
-  /** Shown under the notch. Falls back to the formatted value. */
-  label?: string | null;
-  /** Null on a tick-only milestone — the bar then falls back to count mode. */
-  value?: number | null;
-  completed: boolean;
-  /** Date the threshold was first crossed. Never cleared once written. */
-  hitAt?: string | null;
-}
+export type { GoalDirection, GoalBarMilestone };
+export { fmtGoalValue, goalPercent };
 
 interface GoalBarProps {
   milestones: GoalBarMilestone[];
@@ -32,101 +30,6 @@ interface GoalBarProps {
   size?: 'strip' | 'full';
   /** Manual goals only — an auto goal's notches are derived, not clicked. */
   onToggle?: (id: string) => void;
-}
-
-const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-
-/** 52.5 → "52.5", 60.0 → "60". Milestone captions have to stay narrow. */
-export function fmtGoalValue(n: number): string {
-  return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
-}
-
-interface Notch {
-  id: string;
-  pct: number;
-  caption: string;
-  hit: boolean;
-}
-
-interface Geometry {
-  mode: 'numeric' | 'count';
-  /** What the bar draws. Never regresses — a cleared notch holds the fill. */
-  fillPct: number;
-  /** Where `current` actually sits. Null in count mode. */
-  currentPct: number | null;
-  /** current has fallen back below a notch already cleared. */
-  slipped: boolean;
-  notches: Notch[];
-}
-
-type GeometryInput = Pick<
-  GoalBarProps,
-  'milestones' | 'start' | 'target' | 'current' | 'best' | 'direction'
->;
-
-// The bar reads its own goal: milestones carrying values draw to scale between
-// start and target; a tick-only set falls back to evenly spaced count mode. One
-// component, one look — a manual goal never has to invent numbers to fit in.
-function geometry({ milestones, start, target, current, best }: GeometryInput): Geometry {
-  const numeric =
-    start != null && target != null && start !== target && milestones.some((m) => m.value != null);
-
-  if (!numeric) {
-    const total = milestones.length || 1;
-    const notches = milestones.map((m, i) => ({
-      id: m.id,
-      pct: (i + 1) / total,
-      caption: m.label ?? String(i + 1),
-      hit: m.completed,
-    }));
-    // Same rule as numeric mode: the fill reaches the furthest cleared notch.
-    // Filling by count instead would strand a lit notch past the fill edge the
-    // moment you tick out of order, which just reads as a bug.
-    return {
-      mode: 'count',
-      fillPct: notches.reduce((max, n) => (n.hit && n.pct > max ? n.pct : max), 0),
-      currentPct: null,
-      slipped: false,
-      notches,
-    };
-  }
-
-  // Signed span, so a `down` goal (82 → 75) normalizes with the same formula.
-  const from = start as number;
-  const span = (target as number) - from;
-  const norm = (v: number) => clamp01((v - from) / span);
-
-  const notches: Notch[] = milestones
-    .filter((m) => m.value != null)
-    .map((m) => ({
-      id: m.id,
-      pct: norm(m.value as number),
-      caption: m.label ?? fmtGoalValue(m.value as number),
-      hit: m.completed,
-    }))
-    .sort((a, b) => a.pct - b.pct);
-
-  const currentPct = current != null ? norm(current) : null;
-  const bestPct = best != null ? norm(best) : currentPct;
-  const clearedPct = notches.reduce((max, n) => (n.hit && n.pct > max ? n.pct : max), 0);
-  // The fill is the furthest you have ever been: your best, or the furthest
-  // cleared notch. A best that lands BETWEEN two milestones still counts, which
-  // is why this can't be derived from the notches alone.
-  const fillPct = Math.max(bestPct ?? 0, clearedPct);
-
-  return {
-    mode: 'numeric',
-    fillPct,
-    currentPct,
-    // Anything short of the fill is a slip, however the fill got there.
-    slipped: currentPct != null && currentPct < fillPct - 0.001,
-    notches,
-  };
-}
-
-/** The headline number on a goal card. Same source of truth as the bar's fill. */
-export function goalPercent(input: GeometryInput): number {
-  return Math.round(geometry(input).fillPct * 100);
 }
 
 export function GoalBar({
@@ -220,6 +123,7 @@ export function GoalBar({
                 strip={strip}
                 behindFill={n.pct < geo.fillPct - 0.001}
                 unlocked={unlocked === n.id}
+                currentTier={n.id === geo.currentTierId}
               />
             </button>
           ) : (
@@ -235,21 +139,11 @@ export function GoalBar({
                 strip={strip}
                 behindFill={n.pct < geo.fillPct - 0.001}
                 unlocked={unlocked === n.id}
+                currentTier={n.id === geo.currentTierId}
               />
             </div>
           ),
         )}
-
-        {/* Slip: current has fallen below a notch already cleared. The fill holds
-            (a cleared milestone stays cleared) but the hollow mark says where you
-            actually are. Neutral, not --down — it's a position, not an alarm. */}
-        {geo.slipped && geo.currentPct != null ? (
-          <div
-            className="absolute top-1/2 h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-muted bg-background"
-            style={{ left: `${geo.currentPct * 100}%` }}
-            aria-hidden
-          />
-        ) : null}
       </div>
 
       {/* Per-notch captions. The strip variant shows only the two ends. */}
@@ -258,9 +152,7 @@ export function GoalBar({
           {geo.notches.map((n) => (
             <span
               key={n.id}
-              className={`nums absolute -translate-x-1/2 whitespace-nowrap text-[10px] ${
-                n.hit ? 'text-accent' : 'text-muted opacity-55'
-              }`}
+              className={`nums absolute -translate-x-1/2 whitespace-nowrap text-[10px] ${captionClass(n, geo.currentTierId)}`}
               style={{ left: `${n.pct * 100}%` }}
             >
               {n.caption}
@@ -269,7 +161,7 @@ export function GoalBar({
         </div>
       ) : null}
 
-      <div className="relative mt-1.5 flex items-baseline justify-between gap-2">
+      <div className="flex items-baseline justify-between gap-2">
         <Endcap className="text-muted opacity-60">
           {geo.mode === 'numeric' && start != null ? (
             <>
@@ -280,19 +172,6 @@ export function GoalBar({
             <span className="label text-[9px]">Start</span>
           )}
         </Endcap>
-
-        {/* Tracks the hollow marker's x, so the readout sits under the thing it
-            names rather than floating in the middle of the row. */}
-        {geo.slipped && geo.currentPct != null && current != null ? (
-          <Endcap
-            className="absolute -translate-x-1/2 whitespace-nowrap text-muted"
-            style={{ left: `${Math.min(88, Math.max(12, geo.currentPct * 100))}%` }}
-          >
-            <span className="label mr-1 text-[9px] opacity-70">now</span>
-            {fmtGoalValue(current)}
-            <Unit>{suffix}</Unit>
-          </Endcap>
-        ) : null}
 
         <Endcap className={done ? 'text-accent' : 'text-muted opacity-60'}>
           {geo.mode === 'numeric' && target != null ? (
@@ -307,6 +186,15 @@ export function GoalBar({
       </div>
     </div>
   );
+}
+
+/** Cleared notches read as done (muted, struck through) rather than still-active
+ *  (accent), except the one you're actually sitting at after a slip — that one
+ *  keeps the accent so it reads as "here", not "history". */
+function captionClass(n: Notch, currentTierId: string | null): string {
+  if (n.id === currentTierId) return 'text-accent';
+  if (n.hit) return 'text-muted opacity-55 line-through decoration-muted';
+  return 'text-muted opacity-55';
 }
 
 /** End-of-rail readout. Numbers take the display face per the type roles; the
@@ -338,11 +226,14 @@ function Notchmark({
   strip,
   behindFill,
   unlocked,
+  currentTier,
 }: {
   hit: boolean;
   strip: boolean;
   behindFill: boolean;
   unlocked: boolean;
+  /** The cleared tier you're actually sitting at after a slip — gets a shade. */
+  currentTier: boolean;
 }) {
   // A milestone you skipped past sits on top of the lit rule, where a hairline
   // mark would be invisible — so it reads as an open ring instead.
@@ -351,10 +242,17 @@ function Notchmark({
       <span className="block h-[7px] w-[7px] rounded-full border border-accent bg-background" />
     );
   }
+  if (currentTier) {
+    return (
+      <span className="flex h-[9px] w-[9px] items-center justify-center rounded-full bg-accent-soft">
+        <span className={`block h-[3px] w-[3px] rounded-full bg-accent ${unlocked ? 'goal-unlock' : ''}`} />
+      </span>
+    );
+  }
   return (
     <span
       className={`block rounded-full transition-colors duration-200 ${
-        hit ? 'w-[2px] bg-accent' : 'w-px bg-border'
+        hit ? 'w-px bg-muted' : 'w-px bg-border'
       } ${strip ? 'h-2' : 'h-2.5'} ${unlocked ? 'goal-unlock' : ''}`}
     />
   );

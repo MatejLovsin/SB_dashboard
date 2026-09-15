@@ -1,0 +1,49 @@
+/*
+ * Goals — the few effects the goal surfaces need that Tailwind utilities can't
+ * express. Colors come from the active theme's --accent, so these read amber on
+ * /goals and in its overlays.
+ */
+
+/*
+ * Ledger break — every goal shares the amber, so what tells two apart is the
+ * rule above each one: the panel's hairline, with a short lit segment on its
+ * left end (the same short-accent-rule vocabulary as list bullets). Paired with
+ * extra space in the grid.
+ */
+.goal-tick {
+  position: relative;
+}
+.goal-tick::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 2.5rem;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), calc(0.45 * var(--glow-strength, 1)));
+  pointer-events: none;
+}
+
+/*
+ * The next milestone to hit, on the close-up timeline — a slow breathing halo.
+ * Slow on purpose: it marks "here", it shouldn't nag. The reduced-motion guard
+ * in globals.css stops it.
+ */
+@keyframes goal-next {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.45); }
+  50%      { box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0); }
+}
+.goal-next {
+  animation: goal-next 2.4s ease-in-out infinite;
+}
+
+/* A cleared node on the close-up timeline: lights up once when ticked. */
+@keyframes goal-node-pop {
+  0%   { transform: scale(0.4); box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.7); }
+  60%  { transform: scale(1.35); }
+  100% { transform: scale(1); box-shadow: 0 0 0 9px rgba(var(--accent-rgb), 0); }
+}
+.goal-node-pop {
+  animation: goal-node-pop 0.6s var(--ease-out-quint);
+}

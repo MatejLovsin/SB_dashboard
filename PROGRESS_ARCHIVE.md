@@ -495,4 +495,29 @@ re-runnable: execute it again after adding new plans to link any programme day s
     genuinely under cap. If a multi-line edit to an old file gets blocked at a size that doesn't
     match your own count, check the file's line endings before assuming your math is wrong.
 
+- [x] **Goals colour + goal detail overlay.** (2026-09-15)
+  - **Amber goals theme.** `/goals` got its own `data-theme='goals'` (amber, 245 158 11) instead of
+    borrowing Home's indigo; `sectionTheme()` maps the route. Goal cards no longer carry their
+    section's theme — every card is amber, told apart by `.goal-tick` (a lit 2.5rem segment on the
+    left of each card's top rule) plus wider grid gaps. Section headings stay.
+  - **CSS split.** `globals.css` is baselined and can't grow, so the `[data-theme]` blocks moved to
+    `app/themes.css` and goal effects (`.goal-tick`, `goal-next` pulse, `goal-node-pop`) to
+    `app/goals.css`, both `@import`ed at the top of `globals.css`. **Gotcha:** being imported
+    first, the theme blocks sit *before* `:root`; at equal specificity `:root`'s indigo would beat
+    `[data-theme]` on `<html>` (which AppShell mirrors for portaled overlays). Every theme selector
+    is therefore paired with a `:root[data-theme=…]` form — keep that when adding a theme.
+  - **Weekly programme light chips** went from blue to neutral zinc (`--load-light: #d4d4d8`), so
+    heavy red is the only hue; chips still read apart from plain muted accessories.
+  - **Goal detail overlay.** Tapping a goal card opens `features/goals/GoalDetail.tsx` in a
+    `FocusOverlay` (reading size): readouts (percent, now/best or n/m steps, deadline),
+    `GoalTimeline` (close-up rail: solid cleared nodes, breathing "next" ring, captions that drop
+    on collision), `GoalSteps` (numbered rows, cleared = struck + dated from `hitAt`, next = amber
+    with a left tick), and an `AreaTrend` for auto goals. The card uses a stretched `absolute
+    inset-0` button under `pointer-events-none` content; the pencil and `GoalBar` notch buttons opt
+    back in with `pointer-events-auto`. Manual, still-active goals tick from card, rail or list.
+  - **`AreaTrend` gained an optional `domain`.** The goal trend uses first step → last step,
+    widened to fit the history so nothing clips. Other charts are unchanged (axis from 0).
+  - **Unverified:** phone width of the overlay, and ticking from inside it (not exercised against
+    real rows, since `first_hit_at` is write-once).
+
 ---

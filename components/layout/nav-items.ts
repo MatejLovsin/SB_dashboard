@@ -20,14 +20,14 @@ export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export type SectionTheme = 'home' | 'fitness' | 'school' | 'work';
+export type SectionTheme = 'home' | 'fitness' | 'school' | 'work' | 'goals';
 
 // Maps a pathname to its color theme. Dashboard-only routes with no SideNav
-// entry (journal, todos) fall under 'home' — and so does /goals, whose cards each
-// carry their own section theme instead of the page picking one.
+// entry (journal, todos) fall under 'home'.
 export function sectionTheme(pathname: string): SectionTheme {
   if (pathname.startsWith('/fitness')) return 'fitness';
   if (pathname.startsWith('/school')) return 'school';
   if (pathname.startsWith('/work')) return 'work';
+  if (pathname.startsWith('/goals')) return 'goals';
   return 'home';
 }

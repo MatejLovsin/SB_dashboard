@@ -1,5 +1,6 @@
 @import "tailwindcss";
-
+@import "./themes.css";
+@import "./goals.css";
 /*
  * The app is permanently dark. Redefine the `dark:` variant to always match so
  * existing `dark:text-red-400`-style utilities apply regardless of the OS color
@@ -96,7 +97,7 @@
   --dur-mid: 480ms;
   --dur-slow: 900ms;
 
-  /* Home / default theme — indigo. Section themes below override the accent +
+  /* Home / default theme — indigo. Section themes (app/themes.css) override the accent +
    * chart ramps only; the neutral ink/rule system never changes.
    * `--accent-rgb` is the raw triplet — the glow and every emissive effect need
    * it to build rgba() stops. Always keep the two in sync. */
@@ -120,8 +121,8 @@
    * blue budget and stay constant across section themes. */
   --load-heavy: #f87171;
   --load-heavy-soft: rgba(248, 113, 113, 0.14);
-  --load-light: #60a5fa;
-  --load-light-soft: rgba(96, 165, 250, 0.14);
+  --load-light: #d4d4d8;   /* neutral zinc — brighter than muted accessories, no hue near red */
+  --load-light-soft: rgba(212, 212, 216, 0.1);
 }
 
 /* Hub pages (/, /fitness, /school, /work) get the full lamp; subpages — which
@@ -129,70 +130,6 @@
  * the route depth. */
 [data-scope='sub'] {
   --glow-strength: 0.40;
-}
-
-/* Home — indigo. Mirrors the :root default so the theme can also be nested. */
-[data-theme='home'] {
-  --accent-rgb: 99, 102, 241;
-  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
-   * a custom property is substituted where it is DECLARED, so a child that only
-   * swaps the triplet would keep :root's already-resolved --accent. */
-  --accent: rgb(var(--accent-rgb));
-  --accent-soft: rgba(var(--accent-rgb), 0.12);
-  --chart-1: #c7d2fe;
-  --chart-2: #a5b4fc;
-  --chart-3: #818cf8;
-  --chart-4: #6366f1;
-  --chart-5: #4f46e5;
-  --chart-6: #4338ca;
-}
-
-/* Fitness — red. */
-[data-theme='fitness'] {
-  --accent-rgb: 239, 68, 68;
-  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
-   * a custom property is substituted where it is DECLARED, so a child that only
-   * swaps the triplet would keep :root's already-resolved --accent. */
-  --accent: rgb(var(--accent-rgb));
-  --accent-soft: rgba(var(--accent-rgb), 0.12);
-  --chart-1: #fecaca;
-  --chart-2: #fca5a5;
-  --chart-3: #f87171;
-  --chart-4: #ef4444;
-  --chart-5: #dc2626;
-  --chart-6: #b91c1c;
-}
-
-/* School — teal. */
-[data-theme='school'] {
-  --accent-rgb: 20, 184, 166;
-  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
-   * a custom property is substituted where it is DECLARED, so a child that only
-   * swaps the triplet would keep :root's already-resolved --accent. */
-  --accent: rgb(var(--accent-rgb));
-  --accent-soft: rgba(var(--accent-rgb), 0.12);
-  --chart-1: #99f6e4;
-  --chart-2: #5eead4;
-  --chart-3: #2dd4bf;
-  --chart-4: #14b8a6;
-  --chart-5: #0d9488;
-  --chart-6: #0f766e;
-}
-
-/* Work — graphite / slate. */
-[data-theme='work'] {
-  --accent-rgb: 148, 163, 184;
-  /* Re-declared (not just --accent-rgb) so a theme can be nested on any element:
-   * a custom property is substituted where it is DECLARED, so a child that only
-   * swaps the triplet would keep :root's already-resolved --accent. */
-  --accent: rgb(var(--accent-rgb));
-  --accent-soft: rgba(var(--accent-rgb), 0.12);
-  --chart-1: #e2e8f0;
-  --chart-2: #cbd5e1;
-  --chart-3: #94a3b8;
-  --chart-4: #64748b;
-  --chart-5: #475569;
-  --chart-6: #334155;
 }
 
 @theme inline {

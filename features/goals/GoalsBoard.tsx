@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Target, Trophy } from 'lucide-react';
+import { Pencil, Plus, Target, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CardTitle } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -16,8 +16,8 @@ import {
   type MetricOptions,
   type ResolvedGoal,
 } from '@/lib/queries/goals';
-import type { GoalSection } from '@/lib/db/types';
 import { GoalCard } from './GoalCard';
+import { GoalDetail } from './GoalDetail';
 import { GoalForm } from './GoalForm';
 
 interface GoalsBoardProps {
@@ -26,15 +26,13 @@ interface GoalsBoardProps {
   options: MetricOptions;
 }
 
-// `life` has no section theme of its own — it isn't a part of the app, just a
-// place for goals that belong to none of the three. It borrows the home accent.
-const themeFor = (section: GoalSection) => (section === 'life' ? 'home' : section);
-
 type Editing = { mode: 'new' } | { mode: 'edit'; goal: ResolvedGoal } | null;
 
 export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
   const router = useRouter();
   const [editing, setEditing] = useState<Editing>(null);
+  // The id outlives `open`, so the panel keeps its content while it fades out.
+  const [viewing, setViewing] = useState<{ id: string; open: boolean } | null>(null);
   // Optimistic ticks, keyed by milestone id, cleared when the refresh lands.
   const [ticks, setTicks] = useState<Record<string, boolean>>({});
 
@@ -85,6 +83,11 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
     .filter((r) => percentOf(r) < 100)
     .sort((a, b) => percentOf(b) - percentOf(a))[0]?.goal.id;
 
+  const view = (r: ResolvedGoal) => setViewing({ id: r.goal.id, open: true });
+  const liveViewed = viewing ? live.find((r) => r.goal.id === viewing.id) : undefined;
+  const doneViewed = viewing ? achieved.find((r) => r.goal.id === viewing.id) : undefined;
+  const viewed = liveViewed ?? doneViewed;
+
   const sections = GOAL_SECTIONS.map((section) => ({
     section,
     goals: live.filter((r) => r.goal.section === section),
@@ -112,9 +115,11 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
       ) : null}
 
       {sections.map(({ section, goals }) => (
-        <section key={section} data-theme={themeFor(section)}>
+        // Every goal wears the page's amber; the tick rule on each card is what
+        // separates them, so the grid gets extra room to let that break read.
+        <section key={section}>
           <CardTitle className="mb-2 capitalize">{section}</CardTitle>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-8 lg:grid-cols-2">
             {goals.map((resolved) => (
               <GoalCard
                 key={resolved.goal.id}
@@ -122,6 +127,7 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
                 lead={resolved.goal.id === leadId}
                 onToggleMilestone={(id) => toggle(resolved, id)}
                 onEdit={() => setEditing({ mode: 'edit', goal: resolved })}
+                onOpen={() => view(resolved)}
               />
             ))}
           </div>
@@ -134,18 +140,52 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
             <Trophy className="h-3 w-3" />
             Done
           </CardTitle>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-8 lg:grid-cols-2">
             {achieved.map((resolved) => (
-              <div key={resolved.goal.id} data-theme={themeFor(resolved.goal.section)}>
-                <GoalCard
-                  resolved={resolved}
-                  onEdit={() => setEditing({ mode: 'edit', goal: resolved })}
-                />
-              </div>
+              <GoalCard
+                key={resolved.goal.id}
+                resolved={resolved}
+                onEdit={() => setEditing({ mode: 'edit', goal: resolved })}
+                onOpen={() => view(resolved)}
+              />
             ))}
           </div>
         </section>
       ) : null}
+
+      <FocusOverlay
+        open={viewing?.open === true && viewed !== undefined}
+        onClose={() => setViewing((v) => (v ? { ...v, open: false } : null))}
+        size="reading"
+        title={viewed?.goal.title}
+        action={
+          viewed ? (
+            <button
+              type="button"
+              onClick={() => {
+                setViewing(null);
+                setEditing({ mode: 'edit', goal: viewed });
+              }}
+              aria-label={`Edit ${viewed.goal.title}`}
+              className="rounded-full p-2 text-muted transition-colors hover:bg-border/50 hover:text-foreground"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          ) : null
+        }
+      >
+        {viewed ? (
+          <GoalDetail
+            // Same rule as the card: only a manual goal that's still active takes ticks.
+            resolved={viewed}
+            onToggleMilestone={
+              liveViewed && liveViewed.goal.source === 'manual'
+                ? (id) => toggle(liveViewed, id)
+                : undefined
+            }
+          />
+        ) : null}
+      </FocusOverlay>
 
       <FocusOverlay
         open={editing !== null}

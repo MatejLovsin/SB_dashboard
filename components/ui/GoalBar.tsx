@@ -113,7 +113,7 @@ export function GoalBar({
               onClick={() => toggle(n)}
               aria-pressed={n.hit}
               aria-label={`${n.caption}${n.hit ? ' — cleared' : ''}`}
-              className={`press-flash absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full ${
+              className={`press-flash pointer-events-auto absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full ${
                 strip ? 'h-4 w-4' : 'h-5 w-6'
               }`}
               style={{ left: `${n.pct * 100}%` }}

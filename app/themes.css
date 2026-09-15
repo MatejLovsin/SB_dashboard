@@ -1,0 +1,85 @@
+/*
+ * Section themes — each overrides the accent + chart ramps only; the neutral
+ * ink/rule system in globals.css never changes. `:root` there carries the home
+ * defaults.
+ *
+ * Every block re-declares --accent and --accent-soft (not just --accent-rgb) so a
+ * theme can be nested on any element: a custom property is substituted where it
+ * is DECLARED, so a child that only swaps the triplet would keep :root's
+ * already-resolved --accent.
+ *
+ * Each selector is paired with a `:root[...]` form. AppShell mirrors the theme
+ * onto <html> for portaled overlays, and this file is imported ahead of :root —
+ * at equal specificity :root's defaults would win there.
+ */
+
+/* Home — indigo. Mirrors the :root default so the theme can also be nested. */
+:root[data-theme='home'],
+[data-theme='home'] {
+  --accent-rgb: 99, 102, 241;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #c7d2fe;
+  --chart-2: #a5b4fc;
+  --chart-3: #818cf8;
+  --chart-4: #6366f1;
+  --chart-5: #4f46e5;
+  --chart-6: #4338ca;
+}
+
+/* Fitness — red. */
+:root[data-theme='fitness'],
+[data-theme='fitness'] {
+  --accent-rgb: 239, 68, 68;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #fecaca;
+  --chart-2: #fca5a5;
+  --chart-3: #f87171;
+  --chart-4: #ef4444;
+  --chart-5: #dc2626;
+  --chart-6: #b91c1c;
+}
+
+/* School — teal. */
+:root[data-theme='school'],
+[data-theme='school'] {
+  --accent-rgb: 20, 184, 166;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #99f6e4;
+  --chart-2: #5eead4;
+  --chart-3: #2dd4bf;
+  --chart-4: #14b8a6;
+  --chart-5: #0d9488;
+  --chart-6: #0f766e;
+}
+
+/* Work — graphite / slate. */
+:root[data-theme='work'],
+[data-theme='work'] {
+  --accent-rgb: 148, 163, 184;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #e2e8f0;
+  --chart-2: #cbd5e1;
+  --chart-3: #94a3b8;
+  --chart-4: #64748b;
+  --chart-5: #475569;
+  --chart-6: #334155;
+}
+
+/* Goals — amber. Trophy gold, and the one open hue on the wheel: it sits in the
+ * gap between fitness red and school teal, and clear of the --up green. */
+:root[data-theme='goals'],
+[data-theme='goals'] {
+  --accent-rgb: 245, 158, 11;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #fde68a;
+  --chart-2: #fcd34d;
+  --chart-3: #fbbf24;
+  --chart-4: #f59e0b;
+  --chart-5: #d97706;
+  --chart-6: #b45309;
+}

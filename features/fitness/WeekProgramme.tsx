@@ -8,8 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { isoWeekday, weekdayLabel, type ProgrammeDayWithPlan } from '@/lib/queries/programme';
 
 // Heavy / light main-lift chips. Accessories render as plain muted text so the
-// four main lifts are the only things that carry color — matching the source
-// programme diagram, where only heavy (red) and light (blue) are highlighted.
+// four main lifts are the only things that carry a chip. The source diagram marks
+// light in blue; here it's a neutral grey so heavy (red) is the only hue.
 function ExerciseChip({ item }: { item: ProgrammeItem }) {
   if (!item.emphasis) {
     return (

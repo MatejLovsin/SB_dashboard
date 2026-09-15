@@ -31,6 +31,8 @@ interface AreaTrendProps {
   unit?: string;
   /** Tooltip series name. */
   name?: string;
+  /** Fixed y-axis range. Omit to let the axis start at 0. */
+  domain?: [number, number];
 }
 
 function fmt(v: number, compact?: boolean, unit?: string): string {
@@ -54,6 +56,7 @@ export function AreaTrend({
   compact,
   unit,
   name = 'value',
+  domain,
 }: AreaTrendProps) {
   const theme = useChartTheme();
   const gradientId = useId();
@@ -101,6 +104,7 @@ export function AreaTrend({
           tickLine={false}
           axisLine={false}
           width={56}
+          domain={domain}
           tickFormatter={(v) => fmt(v, compact)}
         />
         <Tooltip

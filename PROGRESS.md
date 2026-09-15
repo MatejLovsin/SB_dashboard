@@ -10,17 +10,11 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
-**Goal checkpoint fixes — SHIPPED (2026-09-15).** Fixed a real data-loss bug: `GoalForm`'s
-milestone label/value inputs fought over width (`w-full` vs `w-24`), squashing the label field to
-~30px right next to the remove button — easy to fat-finger, and since `replaceMilestones` used to
-delete-and-reinsert the whole milestone list on every save, a stray click there could silently
-delete a checkpoint for good. `replaceMilestones` now diffs by milestone `id` instead: only a row
-missing from the submitted list gets deleted, everything else is updated or inserted in place.
-Also: `GoalBar`'s layout math split into `components/ui/goalBarGeometry.ts` (it was pushing the
-line cap); cleared checkpoints now show muted + struck-through instead of fading into the fill
-color; slipping back below your best shades the checkpoint you're actually sitting at; the
-duplicate/overlapping "now" readouts on hub strips and goal cards collapsed to one place. See
-`PROGRESS_ARCHIVE.md` for the full writeup and a hook gotcha worth knowing about.
+**Goals colour + goal detail overlay — SHIPPED (2026-09-15).** `/goals` is amber with a lit tick
+separating cards; tapping a card opens a close-up timeline, step list and trend chart. The weekly
+programme's light chips are neutral grey. Themes now live in `app/themes.css` — see
+`PROGRESS_ARCHIVE.md` for the `:root[data-theme]` specificity gotcha before adding a theme.
+**Still to eyeball:** the detail overlay at phone width, and ticking a manual step from inside it.
 
 The nearest product gap is **goal check-ins have a backend but no UI** — `goal_checkins`,
 `addCheckin` and `listCheckins` are built and tested, but nothing in `GoalForm` logs one, so a
@@ -56,7 +50,7 @@ manual *numeric* goal can only move its bar by ticking milestones.
   `full_programme_updated.svg` literally; unconfirmed whether the diagram is right or Lower was
   meant to mirror Upper. Fixable without a migration at `/fitness/programme`.
 - Whether the work section's graphite accent makes a work goal's bar read as *disabled* rather
-  than *progressing*.
+  than *progressing* — now only on the `/work` hub strip, since `/goals` is amber throughout.
 - Grades are percentages with a pass at 50, both hardcoded in `lib/utils/grades.ts`. If a subject
   ever grades on another scale, this becomes a setting.
 - There is no "show superseded attempts" filter on the past-exams tab — every sitting is listed.

@@ -98,7 +98,7 @@ export function ExercisePicker({
       </div>
 
       {open && (trimmed.length > 0 || results.length > 0) ? (
-        <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg">
+        <ul className="floating-panel absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl py-1">
           {results.map((exercise) => (
             <li key={exercise.id}>
               <button

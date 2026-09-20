@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./themes.css";
 @import "./goals.css";
+@import "./scrollbars.css";
 /*
  * The app is permanently dark. Redefine the `dark:` variant to always match so
  * existing `dark:text-red-400`-style utilities apply regardless of the OS color
@@ -466,18 +467,18 @@ h2 {
 }
 
 /*
- * Floating panel — the one surface in the app that is NOT part of the page's
- * light chain: a modal lifted out of the document over a dimmed backdrop.
+ * Floating panel — the surfaces NOT in the page's light chain: anything lifted
+ * out of the document over live content (`FocusOverlay`, `ExercisePicker`).
  *
  * `.panel` has no fill because the page behind it IS its background. A floating
- * panel has no such luxury — the dimmed-but-still-visible page reads straight
- * through the text. So this is the single place allowed an opaque fill, and the
- * hairline is drawn on all four sides rather than just the top, because a
- * floating panel has to show its own edges against the backdrop.
+ * panel has no such luxury — the page below reads straight through its text. So
+ * these are the only surfaces allowed an opaque fill, and the hairline is drawn
+ * on all four sides rather than just the top, because a floating panel has to
+ * show its own edges against what it covers.
  *
  * It also sits nearest the lamp (`--depth` .06, ink/rule tokens re-declared per
- * the NOTE at the top of this file), which is the point: whatever you opened
- * the overlay to read is the most-lit text on the screen.
+ * the NOTE at the top of this file): whatever you opened it to read is the
+ * most-lit text on the screen.
  */
 .floating-panel {
   --depth: 0.06;
@@ -625,38 +626,6 @@ h2 {
 }
 .goal-unlock {
   animation: goal-unlock 0.7s var(--ease-out-quint);
-}
-
-/* App-native scrollbar — thin, rounded, matches the neutral palette. */
-textarea,
-.styled-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-textarea::-webkit-scrollbar,
-.styled-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
-textarea::-webkit-scrollbar-track,
-.styled-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-textarea::-webkit-scrollbar-thumb,
-.styled-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 9999px;
-}
-textarea::-webkit-scrollbar-thumb:hover,
-.styled-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
-}
-
-/* Hide scrollbar entirely while keeping overflow scroll behaviour. */
-.no-scrollbar {
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
 }
 
 /* Reduced-motion: snap everything instantly. */

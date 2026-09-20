@@ -4,6 +4,58 @@ Only open this file when you need historical context. PROGRESS.md holds the acti
 
 ---
 
+## The exercise dropdown was see-through (2026-09-20)
+
+`ExercisePicker`'s results list (`/fitness/plans/[id]`, the active session, the session editor)
+was `bg-card` — a **2% white wash**, left over from before the redesign turned `--card` into a
+near-invisible badge fill. Floating over the exercise rows below it, the page read straight
+through the exercise names. It now uses `.floating-panel`, the opaque `#0d0d10` surface that
+already existed for `FocusOverlay`, so the fix was deleting `border border-border bg-card
+shadow-lg` and adding one class. `--depth: 0.06` comes with it, so the names are now the
+most-lit text on screen — which was the actual complaint.
+
+**Swept the rest of the app rather than guessing.** Only two layers in the whole app float over
+content — `FocusOverlay` (already opaque since 2026-09-11) and this dropdown; there are no other
+portals or popovers (`grep createPortal|Popover|Dropdown|role="dialog"`). A live scan of 15
+routes for positioned elements with a translucent background found only `TopBar` (90% + 8px
+blur), `BottomNav` (95% + blur) and a 1px goal-timeline tick — the two chrome bars were eyeballed
+with content scrolled under them and do not bleed, so they were left alone. Chart tooltips
+already use `--surface`. Native `<select>` popups are OS-drawn and opaque under `color-scheme:
+dark`. The kanban add-card form is in flow, not floating, and reads fine.
+
+**A gotcha for anyone screenshotting this:** `FocusOverlay` looks transparent in a screenshot
+taken during its scale/fade entrance. Check `getComputedStyle(panel).opacity` before believing it.
+
+---
+
+## App-native scrollbars (2026-09-20)
+
+The last piece of the interface still rendered by the browser rather than by the design language.
+`app/scrollbars.css` (a fourth `@import` at the top of `globals.css`, alongside `themes.css` and
+`goals.css`, which is baselined and cannot grow) styles **every** scroller via `*`, not an opt-in
+class: a 6px pill on no track, no gutter, no stepper arrows, `--scrollbar-thumb` at a *fixed*
+alpha (`#fff 11%` — deliberately not `--border`, whose weight is lit per band, so the bar doesn't
+change brightness as it slides past a section) lifting to `rgba(var(--accent-rgb), .55)` on hover.
+So the AppShell page scroller, dropdown lists, kanban columns, long-form `<pre>` blocks and
+textareas are all covered without touching a component.
+
+**Two gotchas worth keeping:**
+- Blink gives `scrollbar-width` / `scrollbar-color` precedence and *discards* `::-webkit-scrollbar`
+  rules on any element that sets them. The standard properties are therefore fenced inside
+  `@supports not selector(::-webkit-scrollbar)` — true only in Firefox (Chrome answers `true` to
+  `CSS.supports('selector(::-webkit-scrollbar)')`; pre-16.4 Safari makes the condition invalid,
+  which is also false). Don't "simplify" by hoisting them out.
+- `.no-scrollbar` hides via `::-webkit-scrollbar { display: none }`, not `scrollbar-width: none`,
+  because that property is **inherited** and would strip descendant scrollers too — a real risk
+  under `FocusOverlay`, whose body carries `no-scrollbar` and contains textareas. Verified in
+  Chrome: plain 6px, `.no-scrollbar` 0, textarea 6px, a scroller nested inside `.no-scrollbar` 6px.
+
+`.styled-scrollbar` survives only as the Firefox re-arm inside a `.no-scrollbar` subtree; in Blink
+it is now a no-op that falls through to the default. `globals.css` 669 → 638 lines, baseline
+ratcheted down.
+
+---
+
 ## Completed session checklist
 
 - [x] **S1 — Foundation & deploy skeleton.** Next 16 scaffold; schema migration + RLS;

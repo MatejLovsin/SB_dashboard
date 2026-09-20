@@ -1,0 +1,64 @@
+/*
+ * Scrollbars — app chrome, not browser chrome.
+ *
+ * The default UA scrollbar is a wide opaque gutter with a grey slab in it: it
+ * reads as a web page, and it was the one piece of the interface the "lit
+ * instrument" language never reached. So the treatment below is the DEFAULT for
+ * every scroller in the app (`*`), not an opt-in class — the page scroller in
+ * AppShell, overlay bodies, dropdown lists, kanban columns and textareas all get
+ * it without asking.
+ *
+ * A hairline pill on no track, sitting at about the weight of a `--border` rule
+ * and lifting to the section accent under the pointer. Opt out with
+ * `.no-scrollbar`, which keeps the scrolling and drops the bar.
+ */
+
+:root {
+  /* Fixed alphas, deliberately NOT --border: the rule tokens are lit per band,
+   * and a bar that changes weight as it slides past a section reads as a bug. */
+  --scrollbar-size: 6px;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.11);
+  --scrollbar-thumb-hover: rgba(var(--accent-rgb), 0.55);
+}
+
+/* ── Blink / WebKit ────────────────────────────────────────────────────────
+ * No `scrollbar-width` or `scrollbar-color` is set outside the Firefox fence
+ * below, because Blink gives those precedence and throws the pill away. */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+/* No track, no gutter, no stepper arrows — the bar is the thumb and nothing else. */
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+/* Hiding is done with the pseudo-element rather than `scrollbar-width: none`,
+ * which is inherited and would silently strip descendant scrollers too. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Firefox ───────────────────────────────────────────────────────────────
+ * `scrollbar-width` / `scrollbar-color` are inherited, so the root declaration
+ * reaches every scroller. Fenced behind a query only Firefox passes. */
+@supports not selector(::-webkit-scrollbar) {
+  :root,
+  .styled-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}

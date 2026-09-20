@@ -39,9 +39,9 @@ const sizeClasses = {
  * and stays the sole focal point until dismissed (backdrop click, Escape, or the
  * close button). Read-only content lives in `children`.
  *
- * The panel uses `.floating-panel`, not `.panel` — it is the one surface in the
- * app with an opaque fill, because the dimmed page behind it would otherwise
- * read straight through the text. See the note in `globals.css`.
+ * The panel uses `.floating-panel`, not `.panel` — the opaque fill reserved for
+ * surfaces drawn over live content, because the dimmed page behind it would
+ * otherwise read straight through the text. See the note in `globals.css`.
  */
 export function FocusOverlay({
   open,

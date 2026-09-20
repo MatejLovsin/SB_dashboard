@@ -91,14 +91,14 @@ the lamp like everything else. A component must never restyle prose itself.
 ### Floating panels are the one exception to "no fill"
 
 `.panel` has no background on purpose: the page behind it *is* its background. That breaks the
-moment a surface is lifted out of the document over a dimmed backdrop — the page reads straight
-through the text. `FocusOverlay`'s panel therefore uses **`.floating-panel`**: an opaque
+moment a surface is lifted out of the document and drawn over live content — the page reads
+straight through the text. Anything that floats therefore uses **`.floating-panel`**: an opaque
 `#0d0d10` fill — one step *above* the page, since pure black sits below the dimmed backdrop and
 reads as a hole — a hairline on all four sides (a floating thing has to show its own edges), and
-`--depth: 0.06` with the ink tokens re-declared, so whatever you opened the overlay to read is
-the most-lit text on screen. The backdrop around it is unchanged — dimmed + blurred page.
+`--depth: 0.06` with the ink tokens re-declared, so whatever you opened it to read is the
+most-lit text on screen. Used by `FocusOverlay` and by `ExercisePicker`'s results dropdown.
 
-This is the **only** place in the app allowed an opaque fill. Do not use it to rebuild a card.
+**Every** new popover, dropdown or overlay gets it. It is the only opaque fill — never a card.
 
 ---
 

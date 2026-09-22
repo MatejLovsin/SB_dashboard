@@ -18,6 +18,7 @@ import {
   type PlanInput,
   type PlanSetTargets,
 } from '@/lib/queries/plans';
+import { setPlanExerciseEmphasis } from '@/lib/queries/emphasis';
 import type { Exercise } from '@/lib/db/types';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PlanForm } from './PlanForm';
 import { ExercisePicker } from './ExercisePicker';
 import { ExerciseCard } from './PlanExerciseRow';
+import { nextEmphasis } from './EmphasisChip';
 import { SortableExerciseList } from './SortableExerciseList';
 
 export function PlanEditor({ planId }: { planId: string }) {
@@ -87,6 +89,20 @@ export function PlanEditor({ planId }: { planId: string }) {
       patchPlan((prev) => ({ ...prev, lines: prev.lines.filter((l) => l.id !== lineId) }));
       markPlanListStale();
     },
+  });
+
+  // Optimistic: the chip is a tap target you cycle two or three times in a row,
+  // so it has to move on tap rather than after a round trip.
+  const emphasisMutation = useMutation({
+    mutationFn: (line: PlanExerciseLine) =>
+      setPlanExerciseEmphasis(supabase, line.id, nextEmphasis(line.emphasis)),
+    onMutate: (line) =>
+      patchPlan((prev) => ({
+        ...prev,
+        lines: prev.lines.map((l) =>
+          l.id === line.id ? { ...l, emphasis: nextEmphasis(line.emphasis) } : l,
+        ),
+      })),
   });
 
   const reorderMutation = useMutation({
@@ -205,6 +221,7 @@ export function PlanEditor({ planId }: { planId: string }) {
                   exerciseBusy={exerciseBusy}
                   setBusy={setBusy}
                   onRemove={() => removeExerciseMutation.mutate(line.id)}
+                  onCycleEmphasis={() => emphasisMutation.mutate(line)}
                   onAddSet={() => addSet(line)}
                   onUpdateSet={(setId, patch) => updateSetMutation.mutate({ setId, patch })}
                   onRemoveSet={(setId) => removeSetMutation.mutate(setId)}

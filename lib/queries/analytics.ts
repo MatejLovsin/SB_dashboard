@@ -8,13 +8,14 @@ import {
   deltaPercent,
   mondayOf,
 } from '@/lib/utils/stats';
+import { emphasisFor, mainSeries, type Emphasis } from '@/lib/utils/emphasis';
 import type { SessionWithSets } from './fitness';
 import { getSessionWithSets } from './sessions';
 
 type Client = SupabaseClient<Database>;
 
 export type ExerciseSessionPoint = {
-  session: Pick<WorkoutSession, 'id' | 'performed_at' | 'title'>;
+  session: Pick<WorkoutSession, 'id' | 'performed_at' | 'title' | 'emphasis'>;
   sets: SessionSet[];
 };
 
@@ -101,19 +102,9 @@ export async function getFitnessHubMetrics(client: Client): Promise<FitnessHubMe
   };
 }
 
-export type PinnedLiftPoint = { date: string; e1rm: number };
-
-export type ExerciseLibraryEntry = {
-  id: string;
-  name: string;
-  category: string | null;
-  notes: string | null;
-  pinned: boolean;
-  sessionCount: number;       // distinct sessions this exercise appears in
-  bestE1RM: number;           // rounded kg, 0 if never logged
-  lastPerformed: string | null; // ISO of latest session, null if never
-  sparkline: PinnedLiftPoint[]; // est-1RM per session, oldest→newest, last 8 points
-};
+// `emphasis` is how that session was trained — light days are drawn as their
+// own series and excluded from current/delta. See lib/utils/emphasis.ts.
+export type PinnedLiftPoint = { date: string; e1rm: number; emphasis: Emphasis };
 
 export type PinnedLiftTrend = {
   exercise: { id: string; name: string };
@@ -142,10 +133,13 @@ export async function getPinnedLiftTrends(
       const points: PinnedLiftPoint[] = history.map((p) => ({
         date: p.session.performed_at,
         e1rm: Math.round(bestSetE1RM(p.sets)),
+        emphasis: emphasisFor(p.session.emphasis, exercise.id),
       }));
-      const current = points.length > 0 ? points[points.length - 1].e1rm : null;
-      const delta =
-        points.length > 1 ? current! - points[0].e1rm : null;
+      // Compared within the main series only: a light day is not a smaller
+      // number than last week's heavy day, it is a different question.
+      const main = mainSeries(points);
+      const current = main.length > 0 ? main[main.length - 1].e1rm : null;
+      const delta = main.length > 1 && current !== null ? current - main[0].e1rm : null;
       return { exercise, points, current, delta };
     }),
   );
@@ -168,7 +162,7 @@ export async function getExerciseHistory(
   const sessionIds = [...new Set(setRows.map((s) => s.session_id))];
   const { data: sessions, error: sessionsError } = await client
     .from('workout_sessions')
-    .select('id, performed_at, title')
+    .select('id, performed_at, title, emphasis')
     .in('id', sessionIds)
     .order('performed_at', { ascending: true });
   if (sessionsError) throw sessionsError;
@@ -317,90 +311,4 @@ export async function getRecentSessionsByCategory(
   if (rows.length === 0) return [];
 
   return Promise.all(rows.map((row) => getSessionWithSets(client, row.id)));
-}
-
-export async function getExerciseLibrary(client: Client): Promise<ExerciseLibraryEntry[]> {
-  const { data: exercises, error: exercisesError } = await client
-    .from('exercises')
-    .select('id, name, category, notes, pinned');
-  if (exercisesError) throw exercisesError;
-
-  const { data: sets, error: setsError } = await client
-    .from('session_sets')
-    .select('exercise_id, session_id, reps, weight, completed');
-  if (setsError) throw setsError;
-
-  const { data: sessions, error: sessionsError } = await client
-    .from('workout_sessions')
-    .select('id, performed_at');
-  if (sessionsError) throw sessionsError;
-
-  const performedAt = new Map<string, string>();
-  for (const session of sessions ?? []) {
-    performedAt.set(session.id, session.performed_at);
-  }
-
-  // Group sets by exercise_id then by session_id
-  type SetRow = { exercise_id: string; session_id: string; reps: number | null; weight: number | null; completed: boolean };
-  const byExercise = new Map<string, Map<string, SetRow[]>>();
-  for (const set of (sets ?? []) as SetRow[]) {
-    let bySession = byExercise.get(set.exercise_id);
-    if (!bySession) {
-      bySession = new Map();
-      byExercise.set(set.exercise_id, bySession);
-    }
-    let sessionSets = bySession.get(set.session_id);
-    if (!sessionSets) {
-      sessionSets = [];
-      bySession.set(set.session_id, sessionSets);
-    }
-    sessionSets.push(set);
-  }
-
-  const entries: ExerciseLibraryEntry[] = (exercises ?? []).map((exercise) => {
-    const bySession = byExercise.get(exercise.id);
-    if (!bySession || bySession.size === 0) {
-      return {
-        ...exercise,
-        sessionCount: 0,
-        bestE1RM: 0,
-        lastPerformed: null,
-        sparkline: [],
-      };
-    }
-
-    const sessionPoints: { sessionId: string; performedAt: string; e1rm: number }[] = [];
-    for (const [sessionId, sessionSets] of bySession.entries()) {
-      const iso = performedAt.get(sessionId);
-      if (!iso) continue;
-      const e1rm = bestSetE1RM(sessionSets);
-      sessionPoints.push({ sessionId, performedAt: iso, e1rm });
-    }
-
-    sessionPoints.sort((a, b) => a.performedAt.localeCompare(b.performedAt));
-
-    const sessionCount = sessionPoints.length;
-    const bestE1RM = sessionCount > 0
-      ? Math.round(Math.max(...sessionPoints.map((p) => p.e1rm)))
-      : 0;
-    const lastPerformed = sessionCount > 0
-      ? sessionPoints[sessionPoints.length - 1].performedAt
-      : null;
-    const sparkline: PinnedLiftPoint[] = sessionPoints
-      .slice(-8)
-      .map((p) => ({ date: p.performedAt, e1rm: Math.round(p.e1rm) }));
-
-    return {
-      ...exercise,
-      sessionCount,
-      bestE1RM,
-      lastPerformed,
-      sparkline,
-    };
-  });
-
-  return entries.sort((a, b) => {
-    if (b.sessionCount !== a.sessionCount) return b.sessionCount - a.sessionCount;
-    return a.name.localeCompare(b.name);
-  });
 }

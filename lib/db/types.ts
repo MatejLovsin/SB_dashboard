@@ -29,6 +29,11 @@ export type PlanTargetChange = {
 export type ProgrammeEmphasis = 'heavy' | 'light';
 export type ProgrammeItem = { name: string; emphasis: ProgrammeEmphasis | null };
 
+// Snapshot of each exercise's emphasis at the moment a session was started,
+// stored on workout_sessions.emphasis. Keyed by exercise_id. Frozen at log time
+// so editing a plan later never relabels the sessions you already did.
+export type SessionEmphasis = Record<string, ProgrammeEmphasis>;
+
 type Timestamps = { created_at: string };
 
 export interface Database {
@@ -53,8 +58,8 @@ export interface Database {
         Relationships: [];
       };
       plan_exercises: {
-        Row: { id: string; user_id: string; plan_id: string; exercise_id: string; position: number } & Timestamps;
-        Insert: { id?: string; user_id?: string; plan_id: string; exercise_id: string; position?: number; created_at?: string };
+        Row: { id: string; user_id: string; plan_id: string; exercise_id: string; position: number; emphasis: ProgrammeEmphasis | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; plan_id: string; exercise_id: string; position?: number; emphasis?: ProgrammeEmphasis | null; created_at?: string };
         Update: Partial<Database['public']['Tables']['plan_exercises']['Insert']>;
         Relationships: [];
       };
@@ -65,8 +70,8 @@ export interface Database {
         Relationships: [];
       };
       workout_sessions: {
-        Row: { id: string; user_id: string; plan_id: string | null; title: string | null; performed_at: string; notes: string | null; plan_updates: PlanTargetChange[] | null } & Timestamps;
-        Insert: { id?: string; user_id?: string; plan_id?: string | null; title?: string | null; performed_at?: string; notes?: string | null; plan_updates?: PlanTargetChange[] | null; created_at?: string };
+        Row: { id: string; user_id: string; plan_id: string | null; title: string | null; performed_at: string; notes: string | null; plan_updates: PlanTargetChange[] | null; emphasis: SessionEmphasis } & Timestamps;
+        Insert: { id?: string; user_id?: string; plan_id?: string | null; title?: string | null; performed_at?: string; notes?: string | null; plan_updates?: PlanTargetChange[] | null; emphasis?: SessionEmphasis; created_at?: string };
         Update: Partial<Database['public']['Tables']['workout_sessions']['Insert']>;
         Relationships: [];
       };

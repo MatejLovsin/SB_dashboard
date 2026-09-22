@@ -16,6 +16,8 @@
 // trend chart — so adding a metric kind means writing one query, not one of
 // everything.
 
+export type { Observation } from '@/lib/utils/goalSeries';
+
 import type {
   Goal,
   GoalCheckin,
@@ -24,8 +26,11 @@ import type {
   GoalMilestone,
   GoalSection,
   GoalStatus,
+  SessionEmphasis,
 } from '@/lib/db/types';
-import { estimatedOneRepMax, mondayOf } from '@/lib/utils/stats';
+import { estimatedOneRepMax } from '@/lib/utils/stats';
+import { emphasisFor, isLight } from '@/lib/utils/emphasis';
+import { byDate, runningAverage, streakSeries, type Observation } from '@/lib/utils/goalSeries';
 import { countedExams, resolveAttempts } from '@/lib/utils/grades';
 import type { Client } from './fitness';
 
@@ -298,12 +303,6 @@ export function metricsForSection(section: GoalSection): GoalMetricDef[] {
 
 /* ══ Resolution ═══════════════════════════════════════════════════════════ */
 
-export interface Observation {
-  /** ISO date (or timestamp) the value was observed. */
-  at: string;
-  value: number;
-}
-
 export interface MetricSeries {
   series: Observation[];
   mode: AggregationMode;
@@ -320,13 +319,13 @@ function memo<T>(cache: Memo, key: string, fn: () => Promise<T>): Promise<T> {
   return created;
 }
 
-const byDate = (a: Observation, b: Observation) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
+type LiftSession = { performed_at: string; emphasis: SessionEmphasis };
 
-async function sessionDates(client: Client, cache: Memo): Promise<Map<string, string>> {
+async function liftSessions(client: Client, cache: Memo): Promise<Map<string, LiftSession>> {
   return memo(cache, 'workout_sessions', async () => {
-    const { data, error } = await client.from('workout_sessions').select('id, performed_at');
+    const { data, error } = await client.from('workout_sessions').select('id, performed_at, emphasis');
     if (error) throw error;
-    return new Map((data ?? []).map((s) => [s.id, s.performed_at]));
+    return new Map((data ?? []).map((s) => [s.id, { performed_at: s.performed_at, emphasis: s.emphasis ?? {} }]));
   });
 }
 
@@ -354,7 +353,7 @@ async function perSessionFromSets(
     return data ?? [];
   });
 
-  const dates = await sessionDates(client, cache);
+  const sessions = await liftSessions(client, cache);
   const grouped = new Map<string, Array<{ reps: number | null; weight: number | null }>>();
   for (const s of sets) {
     if (!s.completed) continue;
@@ -365,10 +364,11 @@ async function perSessionFromSets(
 
   const out: Observation[] = [];
   for (const [sessionId, rows] of grouped) {
-    const at = dates.get(sessionId);
-    if (!at) continue;
+    const session = sessions.get(sessionId);
+    // A light day is a smaller number by design; counting it would stall the bar.
+    if (!session || isLight(emphasisFor(session.emphasis, exerciseId))) continue;
     const value = reduce(rows);
-    if (value != null && Number.isFinite(value)) out.push({ at, value });
+    if (value != null && Number.isFinite(value)) out.push({ at: session.performed_at, value });
   }
   return out.sort(byDate);
 }
@@ -407,33 +407,6 @@ async function gradedExams(client: Client, cache: Memo) {
 }
 
 /** Running average of a chronological series — the shape a grade goal wants. */
-function runningAverage(values: Observation[]): Observation[] {
-  let sum = 0;
-  return values.map((o, i) => {
-    sum += o.value;
-    return { at: o.at, value: sum / (i + 1) };
-  });
-}
-
-/** One observation per week with the streak length as of that week. */
-function streakSeries(performedAt: string[]): Observation[] {
-  const weeks = [...new Set(performedAt.map((d) => mondayOf(new Date(d))))].sort();
-  const out: Observation[] = [];
-  let run = 0;
-  let previous: string | null = null;
-  for (const week of weeks) {
-    if (previous) {
-      const gap = (Date.parse(week) - Date.parse(previous)) / 604_800_000;
-      run = Math.round(gap) === 1 ? run + 1 : 1;
-    } else {
-      run = 1;
-    }
-    out.push({ at: week, value: run });
-    previous = week;
-  }
-  return out;
-}
-
 /**
  * Turn a metric binding into its observation series. This is the only place that
  * knows how a goal reaches into the rest of the app.
@@ -486,13 +459,13 @@ export async function resolveMetric(
       };
 
     case 'workout_session_count': {
-      const dates = await sessionDates(client, cache);
-      return { mode, series: [...dates.values()].sort().map((at) => ({ at, value: 1 })) };
+      const days = [...(await liftSessions(client, cache)).values()].map((l) => l.performed_at);
+      return { mode, series: days.sort().map((at) => ({ at, value: 1 })) };
     }
 
     case 'workout_streak_weeks': {
-      const dates = await sessionDates(client, cache);
-      return { mode, series: streakSeries([...dates.values()]) };
+      const days = [...(await liftSessions(client, cache)).values()].map((l) => l.performed_at);
+      return { mode, series: streakSeries(days) };
     }
 
     case 'bodyweight':

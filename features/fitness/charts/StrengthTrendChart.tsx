@@ -10,151 +10,124 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import { bestSetE1RM, estimatedOneRepMax, type SetLike } from '@/lib/utils/stats';
-import { tooltipStyle, useChartTheme, type ChartTheme } from '@/lib/utils/chartTheme';
+import { bestSetE1RM } from '@/lib/utils/stats';
+import { useChartTheme, type ChartTheme } from '@/lib/utils/chartTheme';
+import { emphasisFor, hasLightSplit, mainSeries, splitE1RM } from '@/lib/utils/emphasis';
+import { StrengthTooltip, type StrengthPoint } from './StrengthTooltip';
 import type { ExerciseSessionPoint } from '@/lib/queries/analytics';
-import type { SessionSet } from '@/lib/db/types';
 
 interface Props {
   data: ExerciseSessionPoint[];
+  exerciseId: string;
   highlightSessionId?: string;
 }
-
-type ChartPoint = {
-  date: string;
-  e1rm: number;
-  sessionId: string;
-  sets: SessionSet[];
-};
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function bestSetIndex(sets: SetLike[]): number {
-  let bestIdx = -1;
-  let best = 0;
-  sets.forEach((s, i) => {
-    if (!s.completed || s.reps == null || s.weight == null) return;
-    const e = estimatedOneRepMax(s.weight, s.reps);
-    if (e > best) {
-      best = e;
-      bestIdx = i;
-    }
-  });
-  return bestIdx;
+// Drawn per point rather than as a `dot` prop object so the session being viewed
+// can be enlarged. Returns an empty node for the series this point isn't in —
+// otherwise Recharts renders a dot at y=0 for every null.
+function seriesDot(color: string, theme: ChartTheme, highlightSessionId?: string) {
+  return function Dot(props: { cx?: number; cy?: number; value?: number | null; payload?: StrengthPoint }) {
+    const { cx, cy, value, payload } = props;
+    if (cx == null || cy == null || value == null) return <></>;
+    const isHighlight = highlightSessionId != null && payload?.sessionId === highlightSessionId;
+    return (
+      <circle
+        key={`${color}-${payload?.sessionId}`}
+        cx={cx}
+        cy={cy}
+        r={isHighlight ? 6 : 3}
+        fill={color}
+        stroke={isHighlight ? theme.surface : undefined}
+        strokeWidth={isHighlight ? 2 : 0}
+      />
+    );
+  };
 }
 
-function StrengthTooltip({
-  active,
-  payload,
-  theme,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload: ChartPoint }>;
-  theme: ChartTheme;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  const point = payload[0].payload;
-  const bestIdx = bestSetIndex(point.sets);
-
-  return (
-    <div style={tooltipStyle(theme)} className="px-3 py-2">
-      <p className="mb-1" style={{ color: theme.muted }}>
-        {point.date}
-      </p>
-      <ul className="space-y-0.5">
-        {point.sets.map((s, i) => (
-          <li
-            key={s.id}
-            className={
-              s.completed
-                ? i === bestIdx
-                  ? 'font-semibold'
-                  : 'text-foreground/90'
-                : 'text-foreground/50 line-through'
-            }
-            style={s.completed && i === bestIdx ? { color: theme.accent } : undefined}
-          >
-            {s.weight ?? '—'} kg × {s.reps ?? '—'}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-1" style={{ color: theme.muted }}>
-        Est. 1RM: {point.e1rm ? `${point.e1rm} kg` : '—'}
-      </p>
-    </div>
-  );
-}
-
-export function StrengthTrendChart({ data, highlightSessionId }: Props) {
+export function StrengthTrendChart({ data, exerciseId, highlightSessionId }: Props) {
   const theme = useChartTheme();
 
-  const chartData: ChartPoint[] = data.map((p) => ({
-    date: shortDate(p.session.performed_at),
-    e1rm: Math.round(bestSetE1RM(p.sets)),
-    sessionId: p.session.id,
-    sets: p.sets,
-  }));
-  const peak = chartData.length > 0 ? Math.max(...chartData.map((d) => d.e1rm)) : undefined;
+  const chartData: StrengthPoint[] = data.map((p) => {
+    const e1rm = Math.round(bestSetE1RM(p.sets));
+    const emphasis = emphasisFor(p.session.emphasis, exerciseId);
+    return {
+      date: shortDate(p.session.performed_at),
+      ...splitE1RM(e1rm, emphasis),
+      e1rm,
+      emphasis,
+      sessionId: p.session.id,
+      sets: p.sets,
+    };
+  });
+
+  // The peak worth chasing is a heavy-day peak; a light day can never set it,
+  // but the line should not claim to either.
+  const heavy = mainSeries(chartData);
+  const peak = heavy.length > 0 ? Math.max(...heavy.map((d) => d.e1rm)) : undefined;
+  const split = hasLightSplit(chartData);
 
   return (
-    <ResponsiveContainer width="100%" height={180}>
-      <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
-        <CartesianGrid vertical={false} stroke={theme.border} strokeOpacity={0.6} />
-        <XAxis
-          dataKey="date"
-          tick={{ fontSize: 11, fill: theme.muted }}
-          tickLine={false}
-          axisLine={false}
-          interval="preserveStartEnd"
-        />
-        <YAxis
-          tick={{ fontSize: 11, fill: theme.muted }}
-          tickLine={false}
-          axisLine={false}
-          domain={['auto', 'auto']}
-        />
-        <Tooltip content={<StrengthTooltip theme={theme} />} />
-        {peak !== undefined && (
-          <ReferenceLine y={peak} stroke={theme.accent} strokeOpacity={0.3} strokeDasharray="4 4" />
-        )}
-        <Line
-          type="monotone"
-          dataKey="e1rm"
-          stroke={theme.accent}
-          strokeWidth={2.5}
-          dot={(props: { cx?: number; cy?: number; payload?: ChartPoint }) => {
-            const { cx, cy, payload } = props;
-            if (cx == null || cy == null) return <></>;
-            const isHighlight =
-              highlightSessionId != null && payload?.sessionId === highlightSessionId;
-            return isHighlight ? (
-              <circle
-                key={`dot-${payload?.sessionId}`}
-                cx={cx}
-                cy={cy}
-                r={6}
-                fill={theme.accent}
-                stroke={theme.surface}
-                strokeWidth={2}
-              />
-            ) : (
-              <circle
-                key={`dot-${payload?.sessionId}`}
-                cx={cx}
-                cy={cy}
-                r={3}
-                fill={theme.accent}
-                strokeWidth={0}
-              />
-            );
-          }}
-          activeDot={{ r: 5, stroke: theme.surface, strokeWidth: 2 }}
-          connectNulls
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
+          <CartesianGrid vertical={false} stroke={theme.border} strokeOpacity={0.6} />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 11, fill: theme.muted }}
+            tickLine={false}
+            axisLine={false}
+            interval="preserveStartEnd"
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: theme.muted }}
+            tickLine={false}
+            axisLine={false}
+            domain={['auto', 'auto']}
+          />
+          <Tooltip content={<StrengthTooltip theme={theme} />} />
+          {peak !== undefined && (
+            <ReferenceLine y={peak} stroke={theme.accent} strokeOpacity={0.3} strokeDasharray="4 4" />
+          )}
+          {split && (
+            <Line
+              type="monotone"
+              dataKey="light"
+              stroke={theme.loadLight}
+              strokeWidth={1.5}
+              strokeOpacity={0.55}
+              dot={seriesDot(theme.loadLight, theme, highlightSessionId)}
+              activeDot={{ r: 5, stroke: theme.surface, strokeWidth: 2 }}
+              connectNulls
+            />
+          )}
+          <Line
+            type="monotone"
+            dataKey={split ? 'main' : 'e1rm'}
+            stroke={theme.accent}
+            strokeWidth={2.5}
+            dot={seriesDot(theme.accent, theme, highlightSessionId)}
+            activeDot={{ r: 5, stroke: theme.surface, strokeWidth: 2 }}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      {split && (
+        <div className="mt-1 flex items-center gap-4 pl-1 text-[11px]" style={{ color: theme.muted }}>
+          <span className="flex items-center gap-1.5">
+            <span className="h-px w-4" style={{ background: theme.accent }} />
+            Heavy
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-px w-4" style={{ background: theme.loadLight, opacity: 0.55 }} />
+            Light
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

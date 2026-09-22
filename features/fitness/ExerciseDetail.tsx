@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { fitnessKeys, setExercisePinned, updateExerciseNotes } from '@/lib/queries/fitness';
 import { getExerciseHistory } from '@/lib/queries/analytics';
-import type { ExerciseLibraryEntry } from '@/lib/queries/analytics';
+import type { ExerciseLibraryEntry } from '@/lib/queries/exerciseLibrary';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatTile } from '@/components/ui/StatTile';
@@ -171,7 +171,7 @@ export function ExerciseDetail({ entry, onBack }: ExerciseDetailProps) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Card>
               <CardTitle className="mb-4">Est. 1RM trend</CardTitle>
-              <StrengthTrendChart data={history} />
+              <StrengthTrendChart data={history} exerciseId={entry.id} />
             </Card>
             <Card>
               <CardTitle className="mb-4">Volume / session</CardTitle>

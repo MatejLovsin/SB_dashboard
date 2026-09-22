@@ -25,6 +25,8 @@ export interface ChartTheme {
   /** Positive / negative delta colors. */
   up: string;
   down: string;
+  /** Light-day series on est-1RM charts — the neutral zinc the programme strip uses. */
+  loadLight: string;
   /** Section's scale light→dark, for categorical / graded series. */
   scale: [string, string, string, string, string, string];
 }
@@ -39,6 +41,7 @@ const FALLBACK: ChartTheme = {
   foreground: '#f2f2f3',
   up: '#4ade80',
   down: '#f87171',
+  loadLight: '#d4d4d8',
   scale: ['#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca'],
 };
 
@@ -67,6 +70,7 @@ export function readChartTheme(): ChartTheme {
     foreground: readVar('--foreground', FALLBACK.foreground),
     up: readVar('--up', FALLBACK.up),
     down: readVar('--down', FALLBACK.down),
+    loadLight: readVar('--load-light', FALLBACK.loadLight),
     scale: [
       readVar('--chart-1', FALLBACK.scale[0]),
       readVar('--chart-2', FALLBACK.scale[1]),

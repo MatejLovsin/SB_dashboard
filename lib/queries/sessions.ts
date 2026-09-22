@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, WorkoutSession, SessionSet } from '@/lib/db/types';
+import type { Database, WorkoutSession, SessionSet, SessionEmphasis } from '@/lib/db/types';
 import {
   fetchExercisesById,
   type ExerciseLite,
@@ -68,11 +68,20 @@ export async function startSessionFromPlan(
 ): Promise<SessionWithSets> {
   const { plan, lines } = await getPlanWithExercises(client, planId);
 
+  // Freeze the plan's heavy/light intent onto the session. Plans get edited and
+  // the weekly programme is rewritten in place, so neither can say what last
+  // March was trained like — only the session itself can. See migration 0019.
+  const emphasis: SessionEmphasis = {};
+  for (const line of lines) {
+    if (line.emphasis) emphasis[line.exercise_id] = line.emphasis;
+  }
+
   const { data: session, error: sessionError } = await client
     .from('workout_sessions')
     .insert({
       plan_id: planId,
       title: plan.name,
+      emphasis,
       ...(opts.performed_at ? { performed_at: opts.performed_at } : {}),
     })
     .select('*')

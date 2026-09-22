@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic';
 import { Pin } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
-import type { ExerciseLibraryEntry, PinnedLiftPoint } from '@/lib/queries/analytics';
+import type { PinnedLiftPoint } from '@/lib/queries/analytics';
+import type { ExerciseLibraryEntry } from '@/lib/queries/exerciseLibrary';
 
 const MiniTrendChart = dynamic(
   () => import('./charts/MiniTrendChart').then((m) => m.MiniTrendChart),

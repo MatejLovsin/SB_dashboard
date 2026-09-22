@@ -635,3 +635,14 @@ re-runnable: execute it again after adding new plans to link any programme day s
     real rows, since `first_hit_at` is write-once).
 
 ---
+
+## Loading screens show a real goal — 2026-09-22
+
+Every `loading.tsx` under `app/(app)/` centres one active goal on screen — its name, its percent
+counting up, and a lit rule that draws out to its progress and then keeps reaching past it with a
+chase of ticks — over a page-shaped skeleton dimmed to a ghost. Not the `/goals` card and not
+`GoalBar`; see `LoadingScreen.tsx`. The data is a `localStorage` breadcrumb the goals surfaces
+leave behind (`lib/utils/goalSnapshot.ts`), because a Suspense fallback cannot fetch.
+
+---
+

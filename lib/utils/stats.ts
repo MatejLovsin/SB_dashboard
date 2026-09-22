@@ -1,3 +1,5 @@
+import { mainSeries, type Emphasis } from './emphasis';
+
 export type SetLike = { reps: number | null; weight: number | null; completed: boolean };
 
 export function estimatedOneRepMax(weight: number, reps: number): number {
@@ -222,9 +224,17 @@ export function topSet(sets: SetLike[]): { weight: number; reps: number } | null
 // an exercise is stalled only when the latest session improved on NEITHER the previous
 // session (no momentum) NOR the start of the window (no net gain). This keeps you off
 // the list while climbing back from a deload/injury, even if still below your all-time best.
-export function isStalled(history: Array<{ sets: SetLike[] }>, minSessions = 3): boolean {
-  if (history.length < minSessions) return false;
-  const window = history.slice(-minSessions);
+//
+// Light days are dropped first when the caller tags them. On a heavy/light/light
+// week they otherwise guarantee a stall: two of every three sessions are meant to
+// be lower than the one before, and the check would read that as going nowhere.
+export function isStalled(
+  history: Array<{ sets: SetLike[]; emphasis?: Emphasis }>,
+  minSessions = 3,
+): boolean {
+  const comparable = mainSeries(history.map((h) => ({ ...h, emphasis: h.emphasis ?? null })));
+  if (comparable.length < minSessions) return false;
+  const window = comparable.slice(-minSessions);
   const e1rms = window.map((h) => bestSetE1RM(h.sets));
   const latest = e1rms[e1rms.length - 1];
   const previous = e1rms[e1rms.length - 2];
@@ -240,8 +250,11 @@ export type StalledExercise = {
   lastReps: number;
 };
 
+/** One session in a per-exercise history, as the stalled check wants it. */
+export type StalledHistory = { performed_at: string; sets: SetLike[]; emphasis?: Emphasis };
+
 export function findStalledExercises(
-  exerciseSessions: Map<string, Array<{ performed_at: string; sets: SetLike[] }>>,
+  exerciseSessions: Map<string, StalledHistory[]>,
   exerciseNames: Map<string, string>,
 ): StalledExercise[] {
   const result: StalledExercise[] = [];

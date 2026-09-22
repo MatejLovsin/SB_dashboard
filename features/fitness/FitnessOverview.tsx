@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { listSessions, getSessionSetsBySessionIds, getCombinedTrainingConsistency } from '@/lib/queries/analytics';
+import { emphasisFor } from '@/lib/utils/emphasis';
 import { getBodyMetrics } from '@/lib/queries/fitness';
 import {
   sessionsPerWeek,
@@ -10,8 +11,8 @@ import {
   deltaPercent,
   volumeForSessionIds,
   bestSetE1RM,
+  type StalledHistory,
 } from '@/lib/utils/stats';
-import type { SessionSet } from '@/lib/db/types';
 import dynamic from 'next/dynamic';
 import { StatTile } from '@/components/ui/StatTile';
 import { ChartCard } from '@/components/charts/ChartCard';
@@ -117,16 +118,21 @@ export async function FitnessOverview() {
       ? Math.round((catSplit[0].value / catTotal) * 100)
       : 0;
 
-  // Stalled exercises
-  const byExercise = new Map<string, Array<{ performed_at: string; sets: SessionSet[] }>>();
-  const sessionDateById = new Map(sessions.map((s) => [s.id, s.performed_at]));
+  // Stalled exercises. Each entry carries how that session was trained, so a
+  // light day is not mistaken for a failed heavy one.
+  const byExercise = new Map<string, StalledHistory[]>();
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
   for (const set of sets) {
-    const performed_at = sessionDateById.get(set.session_id);
-    if (!performed_at) continue;
+    const session = sessionById.get(set.session_id);
+    if (!session) continue;
+    const performed_at = session.performed_at;
     let hist = byExercise.get(set.exercise_id);
     if (!hist) { hist = []; byExercise.set(set.exercise_id, hist); }
     let entry = hist.find((h) => h.performed_at === performed_at);
-    if (!entry) { entry = { performed_at, sets: [] }; hist.push(entry); }
+    if (!entry) {
+      entry = { performed_at, sets: [], emphasis: emphasisFor(session.emphasis, set.exercise_id) };
+      hist.push(entry);
+    }
     entry.sets.push(set);
   }
   const stalled = findStalledExercises(byExercise, exerciseNames);

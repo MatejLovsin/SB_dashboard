@@ -11,6 +11,9 @@ import { getExerciseHistory } from '@/lib/queries/analytics';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 
+import { SessionEmphasisChip } from './SessionEmphasisChip';
+import { emphasisFor } from '@/lib/utils/emphasis';
+
 const StrengthTrendChart = dynamic(
   () => import('./charts/StrengthTrendChart').then((m) => m.StrengthTrendChart),
   { ssr: false, loading: () => <div className="flex h-44 items-center justify-center"><Spinner /></div> },
@@ -115,7 +118,7 @@ function ExerciseTrendCard({
         <p className="py-6 text-center text-sm text-muted">No logged sets yet.</p>
       ) : (
         <div className="space-y-4">
-          <StrengthTrendChart data={history} highlightSessionId={sessionId} />
+          <StrengthTrendChart data={history} exerciseId={exerciseId} highlightSessionId={sessionId} />
           <VolumeBarChart data={history} highlightSessionId={sessionId} />
         </div>
       )}
@@ -195,10 +198,17 @@ export function SessionDetailBody({ data }: { data: SessionWithSets }) {
             <div className="space-y-5 pt-1">
               {groups.map((group) => (
                 <section key={group.exercise_id} className="space-y-2">
-                  {/* Exercise name heading */}
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
-                    {group.exercise?.name ?? 'Unknown exercise'}
-                  </h3>
+                  {/* Exercise name heading, with how the day was trained */}
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
+                      {group.exercise?.name ?? 'Unknown exercise'}
+                    </h3>
+                    <SessionEmphasisChip
+                      sessionId={session.id}
+                      exerciseId={group.exercise_id}
+                      emphasis={emphasisFor(session.emphasis, group.exercise_id)}
+                    />
+                  </div>
 
                   {/* Sets */}
                   <ul className="space-y-1">

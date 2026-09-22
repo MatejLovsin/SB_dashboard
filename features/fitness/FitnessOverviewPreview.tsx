@@ -1,7 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { listSessions, getSessionSetsBySessionIds } from '@/lib/queries/analytics';
-import { sessionsPerWeek, currentStreakWeeks, findStalledExercises } from '@/lib/utils/stats';
-import type { SessionSet } from '@/lib/db/types';
+import {
+  sessionsPerWeek,
+  currentStreakWeeks,
+  findStalledExercises,
+  type StalledHistory,
+} from '@/lib/utils/stats';
+import { emphasisFor } from '@/lib/utils/emphasis';
 import dynamic from 'next/dynamic';
 import { AlertTriangle, Flame, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -28,12 +33,13 @@ export async function FitnessOverviewPreview() {
   const weekBuckets = sessionsPerWeek(sessions, 12);
   const streak = currentStreakWeeks(sessions);
 
-  const byExercise = new Map<string, Array<{ performed_at: string; sets: SessionSet[] }>>();
-  const sessionDateById = new Map(sessions.map((s) => [s.id, s.performed_at]));
+  const byExercise = new Map<string, StalledHistory[]>();
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
 
   for (const set of sets) {
-    const performed_at = sessionDateById.get(set.session_id);
-    if (!performed_at) continue;
+    const session = sessionById.get(set.session_id);
+    if (!session) continue;
+    const performed_at = session.performed_at;
     let history = byExercise.get(set.exercise_id);
     if (!history) {
       history = [];
@@ -41,7 +47,7 @@ export async function FitnessOverviewPreview() {
     }
     let entry = history.find((h) => h.performed_at === performed_at);
     if (!entry) {
-      entry = { performed_at, sets: [] };
+      entry = { performed_at, sets: [], emphasis: emphasisFor(session.emphasis, set.exercise_id) };
       history.push(entry);
     }
     entry.sets.push(set);

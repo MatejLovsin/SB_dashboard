@@ -8,6 +8,7 @@ import type { PlanSet } from '@/lib/db/types';
 import type { PlanExerciseLine } from '@/lib/queries/fitness';
 import type { PlanSetTargets } from '@/lib/queries/plans';
 import { DragHandle, useExerciseSortable } from './SortableExerciseList';
+import { EmphasisChip } from './EmphasisChip';
 
 // ---------------------------------------------------------------------------
 // ExerciseCard — one plan exercise with its set rows
@@ -18,6 +19,7 @@ export interface ExerciseCardProps {
   exerciseBusy: boolean;
   setBusy: boolean;
   onRemove: () => void;
+  onCycleEmphasis: () => void;
   onAddSet: () => void;
   onUpdateSet: (setId: string, patch: PlanSetTargets) => void;
   onRemoveSet: (setId: string) => void;
@@ -28,6 +30,7 @@ export function ExerciseCard({
   exerciseBusy,
   setBusy,
   onRemove,
+  onCycleEmphasis,
   onAddSet,
   onUpdateSet,
   onRemoveSet,
@@ -42,6 +45,7 @@ export function ExerciseCard({
           {line.exercise?.name ?? 'Unknown exercise'}
         </p>
         <div className="flex shrink-0 items-center gap-1">
+          <EmphasisChip value={line.emphasis} disabled={exerciseBusy} onCycle={onCycleEmphasis} />
           <Button size="icon" variant="danger" aria-label="Remove exercise" disabled={exerciseBusy} onClick={onRemove}>
             <Trash2 className="h-4 w-4" />
           </Button>

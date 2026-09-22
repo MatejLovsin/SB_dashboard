@@ -10,18 +10,28 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
-**Loading screens now show a real goal — SHIPPED (2026-09-22).** Every `loading.tsx` under
-`app/(app)/` centres one active goal on screen — its name, its percent counting up, and a lit rule
-that draws out to its progress and then keeps reaching past it with a chase of ticks — over a
-page-shaped skeleton dimmed to a ghost. Not the `/goals` card and not
-`GoalBar`; see `LoadingScreen.tsx`. The data is a `localStorage` breadcrumb the goals surfaces
-leave behind (`lib/utils/goalSnapshot.ts`), because a Suspense fallback cannot fetch.
-`PROGRESS_ARCHIVE.md` has the two React gotchas and the choices behind it.
-**Still to eyeball:** visit `/goals` once, then navigate to `/fitness`, `/school`, `/work` and
-confirm the right section's goal appears, centred, with the ghost readable but not busy and the
-chase reading as "working" rather than as noise; check
-that a fast navigation shows nothing at all rather than a flash; and the goal detail overlay at
-phone width, plus ticking a manual step from inside it (outstanding since 2026-09-15).
+**Heavy / light emphasis on est-1RM trends — BUILT, needs one input and eyes (2026-09-22).**
+A 1-heavy/2-light week made every est-1RM line zigzag ~12% and read as no progress. Light days are
+now their own series: `plan_exercises.emphasis` holds the intent, `workout_sessions.emphasis` holds
+a snapshot taken at session start (migration `0019`), and `lib/utils/emphasis.ts` is the one rule
+every screen reads it through. Heavy + unclassified drive the main line; light gets a dimmer one.
+Also fixed by the same rule: `isStalled` (was firing on every light day), the hub sparklines, and
+the `exercise_*` goal metrics. Tap-to-cycle chips set it in the plan editor and correct it on a
+logged session.
+
+**Run these in order:** `0019` is applied. Next set heavy/light on the plan lines in the plan
+editor, *then* run `0020_backfill_lift_emphasis.sql`, which stamps the sessions logged since the
+split began (Wed 2026-09-16) from their plan. It is re-runnable and never overwrites a label that
+is already there, so setting more chips and running it again is safe.
+
+**Still to eyeball:** `/fitness/exercise/[id]` with a real DB-incline history — that the two lines
+read as two intensities and not as noise; the legend at phone width; and the chip on a logged
+session actually moving a point between the lines.
+
+Carried over from the loading screens (shipped, archived): visit `/goals`, then `/fitness`,
+`/school`, `/work` and confirm the right section's goal appears over a readable ghost, that a fast
+navigation shows nothing rather than a flash, and the goal detail overlay at phone width plus
+ticking a manual step from inside it (outstanding since 2026-09-15).
 
 The nearest product gap is **goal check-ins have a backend but no UI** — `goal_checkins`,
 `addCheckin` and `listCheckins` are built and tested, but nothing in `GoalForm` logs one, so a
@@ -67,12 +77,15 @@ manual *numeric* goal can only move its bar by ticking milestones.
   feature was removed. No migration was written. Drop them if you want the schema clean.
 - `supabase/migrations/0016_programme_plan_autolink.sql` is **re-runnable**: execute it again
   after adding new plans to link any programme day still showing "Link a plan".
+- `supabase/migrations/0020_backfill_lift_emphasis.sql` is **re-runnable** for the same reason:
+  run it again after setting heavy/light on more plan lines.
 
 ---
 
 ## State of the schema
 
-**Migrations `0001`–`0018` are all applied.** Assume `supabase/migrations/` matches the live
+**Migrations `0001`–`0019` are applied; `0020_backfill_lift_emphasis.sql` is written and not yet
+run — and is re-runnable by design (see its header).** Assume `supabase/migrations/` matches the live
 database. A new migration must ship with a matching `lib/db/types.ts` change — the pre-commit
 hook refuses the commit otherwise, because those types are hand-maintained.
 

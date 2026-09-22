@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, Settings2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { fitnessKeys } from '@/lib/queries/fitness';
-import { getExerciseLibrary } from '@/lib/queries/analytics';
+import { getExerciseLibrary } from '@/lib/queries/exerciseLibrary';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { ExerciseLibraryCard } from './ExerciseLibraryCard';

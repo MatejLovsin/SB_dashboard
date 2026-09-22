@@ -10,23 +10,15 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
-**Heavy / light emphasis on est-1RM trends — BUILT, needs one input and eyes (2026-09-22).**
-A 1-heavy/2-light week made every est-1RM line zigzag ~12% and read as no progress. Light days are
-now their own series: `plan_exercises.emphasis` holds the intent, `workout_sessions.emphasis` holds
-a snapshot taken at session start (migration `0019`), and `lib/utils/emphasis.ts` is the one rule
-every screen reads it through. Heavy + unclassified drive the main line; light gets a dimmer one.
-Also fixed by the same rule: `isStalled` (was firing on every light day), the hub sparklines, and
-the `exercise_*` goal metrics. Tap-to-cycle chips set it in the plan editor and correct it on a
-logged session.
+**Heavy / light emphasis on est-1RM trends — SHIPPED (2026-09-22).** Migrations `0019` and `0020`
+are both applied and the split is live. Light days are their own series; heavy and unclassified
+days share the main line. `lib/utils/emphasis.ts` is the one rule every screen reads it through,
+which also corrected `isStalled`, the hub sparkline delta and the `exercise_*` goal metrics.
+`PROGRESS_ARCHIVE.md` has where the two columns live and why.
 
-**Run these in order:** `0019` is applied. Next set heavy/light on the plan lines in the plan
-editor, *then* run `0020_backfill_lift_emphasis.sql`, which stamps the sessions logged since the
-split began (Wed 2026-09-16) from their plan. It is re-runnable and never overwrites a label that
-is already there, so setting more chips and running it again is safe.
-
-**Still to eyeball:** `/fitness/exercise/[id]` with a real DB-incline history — that the two lines
-read as two intensities and not as noise; the legend at phone width; and the chip on a logged
-session actually moving a point between the lines.
+**Still to eyeball:** the two lines on `/fitness/exercise/[id]` at phone width — that the legend
+does not crowd and that the dimmer light line still reads. Worth a second look at the stalled list
+on `/fitness` too, now that light days no longer count as failed heavy ones.
 
 Carried over from the loading screens (shipped, archived): visit `/goals`, then `/fitness`,
 `/school`, `/work` and confirm the right section's goal appears over a readable ghost, that a fast
@@ -84,8 +76,7 @@ manual *numeric* goal can only move its bar by ticking milestones.
 
 ## State of the schema
 
-**Migrations `0001`–`0019` are applied; `0020_backfill_lift_emphasis.sql` is written and not yet
-run — and is re-runnable by design (see its header).** Assume `supabase/migrations/` matches the live
+**Migrations `0001`–`0020` are all applied.** Assume `supabase/migrations/` matches the live
 database. A new migration must ship with a matching `lib/db/types.ts` change — the pre-commit
 hook refuses the commit otherwise, because those types are hand-maintained.
 

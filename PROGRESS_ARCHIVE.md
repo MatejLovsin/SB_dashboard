@@ -646,3 +646,46 @@ leave behind (`lib/utils/goalSnapshot.ts`), because a Suspense fallback cannot f
 
 ---
 
+## Heavy / light emphasis on est-1RM trends — 2026-09-22
+
+A split with one heavy and two light sessions a week on the same lift made every est-1RM line swing
+~12% between neighbouring points, so real progress read as noise. Rejected the first idea — break
+the line on a >10% jump — because each point is measured against its predecessor, which in a
+1-heavy/2-light week is usually a light day: the surviving edges are light-to-light, so the curve
+would have traced the light days and left the heavy ones as loose dots. It also cannot tell a light
+day from a deload or a real regression.
+
+**Light days are held apart as their own series instead.** Heavy *and unclassified* days share the
+main line — before the split there was one intensity, so those points genuinely are comparable.
+`lib/utils/emphasis.ts` is the single rule, under test.
+
+**Two columns, on purpose (migration `0019`).**
+- `plan_exercises.emphasis` — the intent. It lives there rather than on `programme_days.items`
+  because `plan_exercises` already carries a real `exercise_id`; `items` names are decorative
+  shorthand by design (see `0015`), so matching `"DB incl"` to an exercise would be guesswork.
+- `workout_sessions.emphasis` — the record. A snapshot keyed by exercise id, taken in
+  `startSessionFromPlan`. Deriving it live would have relabelled all history the next time the
+  split changed, since `programme_days` is seven rows rewritten in place.
+
+`0020` backfilled the sessions logged from Wed 2026-09-16 (when the split started) and is
+re-runnable — it only touches sessions still at `{}`, so it never overwrites a manual correction.
+
+**What it fixed away from the chart:** `isStalled` counted each light day as a failed heavy day, so
+on this split it was close to always firing; the pinned-lift `current`/`delta` compared whatever
+happened to be last; and `perSessionFromSets` in `goals.ts` averaged the two intensities, which
+covered `exercise_best_e1rm`, `exercise_best_weight`, `exercise_reps_at_weight` and
+`exercise_volume` at once. Session-count and streak goals still count every session — a light day
+is still a workout.
+
+**Decisions taken:** no rep-range fallback (his rep ranges overlap between intensities; RPE is the
+real difference and is not tracked), so the plan binding is the only source and a tap-to-cycle chip
+on the session detail view is the manual fix-up. No trend/running-best overlay — the grouping alone
+was expected to be enough. The second line and its legend only appear at ≥2 light days.
+
+**Two splits to stay under the line rules**, both ratcheted down: `analytics.ts` 406 → 314
+(exercise-library queries → `lib/queries/exerciseLibrary.ts`) and `goals.ts` 1127 → 1100
+(`Observation`, `byDate`, `runningAverage`, `streakSeries` → `lib/utils/goalSeries.ts`, now pure —
+relevant to the open thread about `workout_streak_weeks` being unverified).
+
+---
+

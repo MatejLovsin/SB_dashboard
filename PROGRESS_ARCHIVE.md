@@ -4,6 +4,68 @@ Only open this file when you need historical context. PROGRESS.md holds the acti
 
 ---
 
+## Loading screens show a real goal (2026-09-22)
+
+Every `loading.tsx` under `app/(app)/` now holds one active goal at the optical centre of the
+screen: its name, its percent counting up, and a single lit rule beneath that draws out to where
+you have got to. Past the leading edge the rule keeps reaching — five ticks chasing the target on
+a staggered 1.2s loop. Solid is what you have earned; the chase is the load still working. One
+rule, two meanings, and no spinner.
+
+**The chase exists because the first cut was inert**: the fill draws once in 900ms and then sits
+perfectly still, which reads as *finished*, not *loading*. It is now the only repeating motion on
+the screen — the skeleton ghost and the track are both static — so nothing competes with it. Behind it, dimmed to a ghost at 50%, sits a
+skeleton shaped like the page being loaded.
+
+**It is deliberately NOT the /goals card.** The first cut reused `GoalBar` and sat at the top of
+the page; both were wrong. The trace in `LoadingScreen.tsx` borrows GoalBar's vocabulary — hairline
+track, 2px lit fill, glowing playhead — with the notches, captions and endcaps stripped, because
+here it is the only thing on screen and has nothing to sit beside. The snapshot was trimmed to
+match: id, title, section, percent. Nothing else is drawn, so nothing else is stored.
+
+**Everything animates on Tailwind built-ins**, because `globals.css` may only shrink and a
+travelling-gradient sweep would have needed a new keyframe (i.e. a CSS module, a convention this
+repo does not use). The chase is `animate-pulse` with `animationDuration`/`animationDelay`
+overridden inline — the utility class is what emits the keyframes, so do not "tidy" it into a raw
+`animation:` shorthand. The count-up reuses `components/ui/CountUp.tsx`, which already runs 900ms
+on ease-out-quint: the same duration and curve as the fill, so the number and the rule land
+together.
+
+**The constraint that shaped it.** A `loading.tsx` is a Suspense *fallback* — React renders it
+BEFORE the page's data exists, so it cannot await Supabase without defeating its own purpose. An
+auto goal's progress is also resolved server-side out of rows we deliberately never ship to the
+client. So the goals surfaces leave a breadcrumb instead: `GoalStrip` (per section) and
+`GoalsBoard` (all sections, ticks folded in) flatten what they already rendered into
+`localStorage` via `lib/utils/goalSnapshot.ts`, and the loading screen reads it back. The numbers
+are last-known, not live — one tick behind for a screen that lives 300ms.
+
+**Two React gotchas paid for along the way.** Reading `localStorage` in an effect and calling
+`setState` trips `react-hooks/set-state-in-effect`, so it goes through `useSyncExternalStore` —
+which means the getter must return the *same array reference* until the stored string changes, or
+React re-renders forever. Hence the raw-string-keyed cache in `goalSnapshot.ts`. The
+`getServerSnapshot` returns `[]`, which is also what keeps the first client paint matching the SSR'd
+fallback.
+
+**Choices, so they don't get re-litigated:** goals are picked section-first then nearest-to-done;
+finished goals are excluded (a full bar mid-navigation reads as "done"); nothing paints for the
+first 200ms so fast navigations look instant instead of flashing; the goal rotates every 2.5s,
+which only ever shows up on a genuinely slow load. The skeleton does not pulse — a breathing ghost
+would compete with the one thing on that screen meant to move. The stage is
+`min-h-[calc(100dvh-10.5rem)]` (`6.5rem` on `md`), i.e. viewport minus the top bar and `main`'s own
+padding; centring against that lands the goal within a hair of true centre. No CSS was added — `globals.css` is over the
+line cap and may only shrink, so the entrance reuses `.stagger-fade` and the skeletons use
+`animate-pulse`.
+
+---
+
+## Goals colour + goal detail overlay (2026-09-15)
+
+`/goals` is amber with a lit tick separating cards; tapping a card opens a close-up timeline, step
+list and trend chart. The weekly programme's light chips are neutral grey. Themes live in
+`app/themes.css` — see the `:root[data-theme]` specificity note in this file before adding one.
+
+---
+
 ## The exercise dropdown was see-through (2026-09-20)
 
 `ExercisePicker`'s results list (`/fitness/plans/[id]`, the active session, the session editor)

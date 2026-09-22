@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Plus, Target, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import {
   type MetricOptions,
   type ResolvedGoal,
 } from '@/lib/queries/goals';
+import { toGoalSnapshot, writeGoalSnapshot } from '@/lib/utils/goalSnapshot';
 import { GoalCard } from './GoalCard';
 import { GoalDetail } from './GoalDetail';
 import { GoalForm } from './GoalForm';
@@ -50,6 +51,17 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
       best: r.best,
       direction: r.goal.direction,
     });
+
+  // The board sees every section at once, so it owns the whole snapshot the
+  // loading screens read back. Ticks are folded in, which keeps a just-cleared
+  // milestone from reappearing as unfinished on the next navigation.
+  useEffect(() => {
+    const withTick = (r: ResolvedGoal) => withTicks(r);
+    writeGoalSnapshot(
+      'all',
+      active.map((r) => toGoalSnapshot(withTick(r), percentOf(withTick(r)))),
+    );
+  });
 
   async function toggle(resolved: ResolvedGoal, milestoneId: string) {
     const milestone = resolved.milestones.find((m) => m.id === milestoneId);

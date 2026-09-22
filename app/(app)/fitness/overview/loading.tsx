@@ -1,9 +1,15 @@
-import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { SkeletonChart, SkeletonHeader, SkeletonTiles } from '@/components/ui/Skeleton';
 
+// Overview leads with the hero trend chart.
 export default function Loading() {
   return (
-    <div className="flex h-48 items-center justify-center">
-      <Loader2 className="h-6 w-6 animate-spin text-muted" />
-    </div>
+    <LoadingScreen section="fitness">
+      <div className="space-y-8">
+        <SkeletonHeader />
+        <SkeletonChart />
+        <SkeletonTiles />
+      </div>
+    </LoadingScreen>
   );
 }

@@ -1,15 +1,21 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { Target } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { GoalBar, fmtGoalValue } from '@/components/ui/GoalBar';
+import type { GoalSection } from '@/lib/db/types';
 import type { ResolvedGoal } from '@/lib/queries/goals';
+import { toGoalSnapshot, writeGoalSnapshot } from '@/lib/utils/goalSnapshot';
 
 const MAX_ON_HUB = 6;
 
 interface GoalStripProps {
   goals: ResolvedGoal[];
+  /** Which section these belong to — the rail leaves a snapshot behind for the
+   *  loading screens, and it may only replace its own section's entry. */
+  section: GoalSection;
 }
 
 /**
@@ -20,7 +26,13 @@ interface GoalStripProps {
  * Shows every active goal rather than only pinned ones (no bookkeeping to keep
  * up with), ordered nearest-to-done, capped so the rail can't swallow the hub.
  */
-export function GoalStrip({ goals }: GoalStripProps) {
+export function GoalStrip({ goals, section }: GoalStripProps) {
+  // Before the early return: a section that has just lost its last goal still
+  // needs to clear the stale snapshot. See lib/utils/goalSnapshot.ts.
+  useEffect(() => {
+    writeGoalSnapshot(section, goals.map((g) => toGoalSnapshot(g)));
+  }, [section, goals]);
+
   if (goals.length === 0) return null;
 
   const ordered = [...goals].sort((a, b) => b.percent - a.percent);

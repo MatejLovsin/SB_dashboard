@@ -47,7 +47,7 @@ export default async function WorkPage() {
     <div className="space-y-4">
       <PageHeader title="Work" description="Roadmap, decisions, and analytics." />
 
-      <GoalStrip goals={goals} />
+      <GoalStrip goals={goals} section="work" />
 
       {/* KPI strip — 4 tiles */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

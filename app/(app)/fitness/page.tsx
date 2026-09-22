@@ -66,7 +66,7 @@ export default async function FitnessPage() {
 
       {programmeDays.length > 0 && <WeekProgramme days={programmeDays} />}
 
-      <GoalStrip goals={goals} />
+      <GoalStrip goals={goals} section="fitness" />
 
       {/* KPI strip */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

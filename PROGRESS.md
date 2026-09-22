@@ -10,11 +10,18 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
-**Goals colour + goal detail overlay — SHIPPED (2026-09-15).** `/goals` is amber with a lit tick
-separating cards; tapping a card opens a close-up timeline, step list and trend chart. The weekly
-programme's light chips are neutral grey. Themes now live in `app/themes.css` — see
-`PROGRESS_ARCHIVE.md` for the `:root[data-theme]` specificity gotcha before adding a theme.
-**Still to eyeball:** the detail overlay at phone width, and ticking a manual step from inside it.
+**Loading screens now show a real goal — SHIPPED (2026-09-22).** Every `loading.tsx` under
+`app/(app)/` centres one active goal on screen — its name, its percent counting up, and a lit rule
+that draws out to its progress and then keeps reaching past it with a chase of ticks — over a
+page-shaped skeleton dimmed to a ghost. Not the `/goals` card and not
+`GoalBar`; see `LoadingScreen.tsx`. The data is a `localStorage` breadcrumb the goals surfaces
+leave behind (`lib/utils/goalSnapshot.ts`), because a Suspense fallback cannot fetch.
+`PROGRESS_ARCHIVE.md` has the two React gotchas and the choices behind it.
+**Still to eyeball:** visit `/goals` once, then navigate to `/fitness`, `/school`, `/work` and
+confirm the right section's goal appears, centred, with the ghost readable but not busy and the
+chase reading as "working" rather than as noise; check
+that a fast navigation shows nothing at all rather than a flash; and the goal detail overlay at
+phone width, plus ticking a manual step from inside it (outstanding since 2026-09-15).
 
 The nearest product gap is **goal check-ins have a backend but no UI** — `goal_checkins`,
 `addCheckin` and `listCheckins` are built and tested, but nothing in `GoalForm` logs one, so a

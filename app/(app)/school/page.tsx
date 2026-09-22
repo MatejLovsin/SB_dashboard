@@ -49,7 +49,7 @@ export default async function SchoolPage() {
     <div className="space-y-4">
       <PageHeader title="School" description="Exams, study sessions, and results." />
 
-      <GoalStrip goals={goals} />
+      <GoalStrip goals={goals} section="school" />
 
       {/* KPI strip — 4-col on desktop */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

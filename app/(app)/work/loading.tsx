@@ -1,9 +1,16 @@
-import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { SkeletonChart, SkeletonHeader, SkeletonRows, SkeletonTiles } from '@/components/ui/Skeleton';
 
+// The hub: header, stat row, metric charts, then the kanban.
 export default function Loading() {
   return (
-    <div className="flex h-48 items-center justify-center">
-      <Loader2 className="h-6 w-6 animate-spin text-muted" />
-    </div>
+    <LoadingScreen section="work">
+      <div className="space-y-8">
+        <SkeletonHeader />
+        <SkeletonTiles />
+        <SkeletonChart />
+        <SkeletonRows rows={4} />
+      </div>
+    </LoadingScreen>
   );
 }

@@ -116,7 +116,10 @@ export async function deleteBoard(client: Client, id: string): Promise<void> {
 /* ══ Nodes ════════════════════════════════════════════════════════════════ */
 
 export type NodePatch = Partial<
-  Pick<BoardNode, 'title' | 'body' | 'x' | 'y' | 'done' | 'unsorted' | 'phase_id' | 'goal_id'>
+  Pick<
+    BoardNode,
+    'title' | 'body' | 'x' | 'y' | 'done' | 'unsorted' | 'phase_id' | 'goal_id' | 'image_path'
+  >
 >;
 
 export async function createNode(

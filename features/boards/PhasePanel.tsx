@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Circle, CircleCheck } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 import type { PhasePatch } from '@/lib/queries/boardPhases';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { PhaseData } from './boardFlow';
 import { GoalLinkField, GoalLinkStatus } from './goalLinks';
+import { DoneToggle } from './NodePanel';
 
 interface PhasePanelProps {
   data: PhaseData;
@@ -64,17 +65,7 @@ function PhaseEditing({ data, onSave, onDelete, onClose }: Omit<PhasePanelProps,
         required
         autoFocus
       />
-      <button
-        type="button"
-        aria-pressed={done}
-        onClick={() => setDone((d) => !d)}
-        className={`flex items-center gap-2 text-sm transition-colors ${
-          done ? 'text-accent' : 'text-muted hover:text-foreground'
-        }`}
-      >
-        {done ? <CircleCheck className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-        {done ? 'Done' : 'Mark as done'}
-      </button>
+      <DoneToggle done={done} onToggle={() => setDone((d) => !d)} />
       <GoalLinkField value={goalId} onChange={setGoalId} />
       {goalId === (data.goalId ?? '') ? <GoalLinkStatus goalId={data.goalId} /> : null}
 

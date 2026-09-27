@@ -4,7 +4,13 @@ import type { BoardEdge, BoardNode, BoardPhase } from '@/lib/db/types';
 // The board's rows as React Flow sees them, and the geometry that decides which
 // phase an idea sits in. Pure: nothing here touches Supabase or React.
 
-export type IdeaData = { title: string; body: string | null; done: boolean; goalId: string | null };
+export type IdeaData = {
+  title: string;
+  body: string | null;
+  done: boolean;
+  goalId: string | null;
+  imagePath: string | null;
+};
 export type PhaseData = { title: string; done: boolean; goalId: string | null };
 export type IdeaFlowNode = Node<IdeaData, 'idea'>;
 export type PhaseFlowNode = Node<PhaseData, 'phase'>;
@@ -25,7 +31,13 @@ export const toFlowNode = (row: BoardNode): IdeaFlowNode => ({
   type: 'idea',
   position: { x: row.x, y: row.y },
   parentId: row.phase_id ?? undefined,
-  data: { title: row.title, body: row.body, done: row.done, goalId: row.goal_id },
+  data: {
+    title: row.title,
+    body: row.body,
+    done: row.done,
+    goalId: row.goal_id,
+    imagePath: row.image_path,
+  },
 });
 
 // A phase sits behind the ideas, can only be dragged by its title (so a drag

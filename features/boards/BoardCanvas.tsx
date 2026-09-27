@@ -30,16 +30,25 @@ import { useBoardGraph } from './useBoardGraph';
 const nodeTypes = { idea: IdeaNode, phase: PhaseNode };
 const edgeTypes = { light: LightEdge };
 
-export function BoardCanvas({ contents, goals }: { contents: BoardContents; goals: BoardGoals }) {
+interface BoardCanvasProps {
+  contents: BoardContents;
+  goals: BoardGoals;
+  images: Record<string, string>;
+}
+
+export function BoardCanvas({ contents, goals, images }: BoardCanvasProps) {
   const canEdit = useCanEdit();
-  const graph = useBoardGraph(contents);
+  const graph = useBoardGraph(contents, images);
   const [open, setOpen] = useState<Open>(null);
   const [trayOpen, setTrayOpen] = useState(false);
   const onMoveEnd = useViewportSaver(contents.board.id, canEdit);
   const edges = useLitEdges(graph.nodes, graph.edges, goals);
   const { viewport } = contents.board;
-  const { resizePhase } = graph;
-  const context = useMemo(() => ({ goals, canEdit, resizePhase }), [goals, canEdit, resizePhase]);
+  const { resizePhase, imageUrls } = graph;
+  const context = useMemo(
+    () => ({ goals, images: imageUrls, canEdit, resizePhase }),
+    [goals, imageUrls, canEdit, resizePhase],
+  );
 
   const openNode = (node: BoardFlowNode) =>
     setOpen({ kind: node.type === 'phase' ? 'phase' : 'idea', id: node.id });

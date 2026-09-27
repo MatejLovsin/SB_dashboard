@@ -7,6 +7,7 @@ import { ArrowLeft, Settings2 } from 'lucide-react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { createClient } from '@/lib/supabase/client';
+import { removeBoardImages } from '@/lib/queries/boardImages';
 import {
   deleteBoard,
   updateBoard,
@@ -17,7 +18,13 @@ import type { BoardGoals } from './boardContext';
 import { BoardCanvas } from './BoardCanvas';
 import { BoardForm } from './BoardForm';
 
-export function BoardEditor({ contents, goals }: { contents: BoardContents; goals: BoardGoals }) {
+interface BoardEditorProps {
+  contents: BoardContents;
+  goals: BoardGoals;
+  images: Record<string, string>;
+}
+
+export function BoardEditor({ contents, goals, images }: BoardEditorProps) {
   const router = useRouter();
   const { board } = contents;
   const [editing, setEditing] = useState(false);
@@ -38,7 +45,10 @@ export function BoardEditor({ contents, goals }: { contents: BoardContents; goal
 
   async function remove() {
     try {
-      await deleteBoard(createClient(), board.id);
+      const client = createClient();
+      // Rows cascade with the board; files in storage do not. Best effort.
+      await removeBoardImages(client, board.id).catch(console.error);
+      await deleteBoard(client, board.id);
       router.push('/boards');
       router.refresh();
     } catch (e) {
@@ -73,7 +83,7 @@ export function BoardEditor({ contents, goals }: { contents: BoardContents; goal
       </header>
 
       <ReactFlowProvider>
-        <BoardCanvas contents={contents} goals={goals} />
+        <BoardCanvas contents={contents} goals={goals} images={images} />
       </ReactFlowProvider>
 
       <FocusOverlay open={editing} onClose={() => setEditing(false)} title="Board">

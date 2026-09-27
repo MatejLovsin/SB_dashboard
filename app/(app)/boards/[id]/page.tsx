@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getBoard } from '@/lib/queries/boards';
+import { signImages } from '@/lib/queries/boardImages';
 import { listResolvedGoals } from '@/lib/queries/goals';
 import { BoardEditor } from '@/features/boards/BoardEditor';
 import type { BoardGoals } from '@/features/boards/boardContext';
@@ -35,5 +36,12 @@ export default async function BoardPage({ params }: Props) {
       .map((r) => ({ id: r.goal.id, title: r.goal.title, section: r.goal.section })),
   };
 
-  return <BoardEditor contents={contents} goals={goals} />;
+  // The bucket is private: sign every image on the board in one call.
+  const paths = contents.nodes.flatMap((n) => (n.image_path ? [n.image_path] : []));
+  const images = await signImages(supabase, paths).catch((e: unknown) => {
+    console.error(e);
+    return {};
+  });
+
+  return <BoardEditor contents={contents} goals={goals} images={images} />;
 }

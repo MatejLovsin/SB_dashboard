@@ -106,6 +106,17 @@
   overflow: hidden;
 }
 
+/* A picture sits under the words, unframed: no border, just rounded. */
+.idea-image {
+  display: block;
+  margin-top: 8px;
+  max-width: 200px;
+  max-height: 160px;
+  border-radius: 8px;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 /* Selected: the light takes the section accent and the words brighten. */
 .idea-node[data-selected='true'] .idea-light {
   border-color: var(--accent);

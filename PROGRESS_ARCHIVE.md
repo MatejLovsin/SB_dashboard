@@ -4,6 +4,44 @@ Only open this file when you need historical context. PROGRESS.md holds the acti
 
 ---
 
+## Boards — a canvas per project (2026-09-27 → 2026-09-28)
+
+`/boards` (own nav item, violet theme): one React Flow canvas per project, in the "lit
+instrument" language — an idea is a point of light with its words, a line is a trace that only
+ever means *related* (no arrows, optional label), a phase is a pool of light. Shipped in four
+steps, migrations `0021_boards` and `0022_board_images`.
+
+- **Ideas & lines** — title + full markdown note, manual done, a camera that remembers itself.
+  Editing is desktop-only (`lib/hooks/useCanEdit.ts`: ≥768 px **and** a fine pointer); the phone
+  views and reads. `BoardsFooter` lists linked boards at the foot of Home / Fitness / School /
+  Work / Goals and renders nothing when none is linked.
+- **Phases** — membership is *geometry*: after any drop, resize or new phase, an idea belongs to
+  the smallest phase containing its light (`settleIdeas` in `features/boards/boardFlow.ts`).
+  Child positions are stored relative to the phase. Phases are `deletable:false` because React
+  Flow deletes children with a parent; deleting from the panel rewrites children to absolute
+  first. The pool is `pointer-events:none` so lines inside stay clickable.
+- **Goal links** — an idea or phase links to one whole goal. The board page resolves **all**
+  goals once; open goals draw a 2 px amber trace, achieved ones burn amber brighter than done
+  and light their lines. `/goals?goal=<id>` opens that goal's overlay. That deep link exposed
+  an SSR crash in `FocusOverlay` (portal to `document.body` on the server) — fixed there for
+  every overlay.
+- **Quick-add** — phone `+ Thought` on `/boards` (board picker) and on a board; first line is
+  the title (`lib/utils/thought.ts`, tested). Thoughts land `unsorted` and wait in a desktop
+  tray until placed.
+- **Images** — private bucket `board-images`, paths `<uid>/<board>/<node>-<ts>.<ext>`, owner-only
+  storage policies on the first folder. Downscaled in the browser to ≤1600 px. Signed URLs (12 h)
+  for the whole board in one call. Replace / idea delete / board delete remove the files —
+  verified live: each old object answers `NoSuchKey`.
+
+**Gotchas worth keeping:**
+- Storage `remove()` reports success when a policy lets nothing be deleted — `removeImages`
+  compares the returned list to what it asked for.
+- A deleted object can still be served by Supabase's CDN for about a minute; do not read a
+  200 on an old signed URL right after a delete as "the delete failed".
+- Testing phone width in automation: the Chrome window may refuse to resize; a same-origin
+  `<iframe>` at 400 px gets the phone media queries. A background tab pauses
+  `requestAnimationFrame` and React Flow's measuring, so overlays and nodes can look missing.
+
 ## Loading screens show a real goal (2026-09-22)
 
 Every `loading.tsx` under `app/(app)/` now holds one active goal at the optical centre of the

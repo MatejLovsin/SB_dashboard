@@ -39,7 +39,7 @@ export function CanvasOverlays({ graph, canEdit, open, close }: OverlaysProps) {
             key={idea.id}
             data={idea.data}
             canEdit={canEdit}
-            onSave={(patch) => graph.saveNode(idea.id, patch)}
+            onSave={(patch, image) => graph.saveNode(idea.id, patch, image)}
             onDelete={() => {
               void graph.removeNode(idea.id);
               close();

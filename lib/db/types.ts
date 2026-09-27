@@ -206,8 +206,8 @@ export interface Database {
         Relationships: [];
       };
       board_nodes: {
-        Row: { id: string; user_id: string; board_id: string; phase_id: string | null; title: string; body: string | null; x: number; y: number; unsorted: boolean; done: boolean; goal_id: string | null; updated_at: string } & Timestamps;
-        Insert: { id?: string; user_id?: string; board_id: string; phase_id?: string | null; title: string; body?: string | null; x?: number; y?: number; unsorted?: boolean; done?: boolean; goal_id?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; board_id: string; phase_id: string | null; title: string; body: string | null; x: number; y: number; unsorted: boolean; done: boolean; goal_id: string | null; image_path: string | null; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; board_id: string; phase_id?: string | null; title: string; body?: string | null; x?: number; y?: number; unsorted?: boolean; done?: boolean; goal_id?: string | null; image_path?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['board_nodes']['Insert']>;
         Relationships: [];
       };

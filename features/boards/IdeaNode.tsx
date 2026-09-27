@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { markdownExcerpt } from '@/lib/utils/markdown';
 import type { IdeaFlowNode } from './boardFlow';
-import { useGoalState } from './boardContext';
+import { useGoalState, useImageUrl } from './boardContext';
 import { GoalTrace, goalAttr } from './goalLinks';
 
 // An idea is a point of light with its words beside it — no card. The light is
@@ -17,6 +17,7 @@ export const IdeaNode = memo(function IdeaNode({
 }: NodeProps<IdeaFlowNode>) {
   const excerpt = markdownExcerpt(data.body);
   const goal = useGoalState(data.goalId);
+  const imageUrl = useImageUrl(data.imagePath);
   return (
     <div
       className="idea-node"
@@ -35,6 +36,11 @@ export const IdeaNode = memo(function IdeaNode({
         <div className="idea-title">{data.title}</div>
         {goal && !goal.achieved ? <GoalTrace percent={goal.percent} /> : null}
         {excerpt ? <p className="idea-excerpt">{excerpt}</p> : null}
+        {imageUrl ? (
+          // Below the words, so the light stays level with the title.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt="" className="idea-image" draggable={false} loading="lazy" />
+        ) : null}
       </div>
     </div>
   );

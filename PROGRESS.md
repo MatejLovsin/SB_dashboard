@@ -10,15 +10,9 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
-**Boards (whiteboard per project) — step 1 of 4 LIVE (2026-09-28).** `0021_boards` is applied
-and the canvas was eyeballed by the user (committed `2645376`, pushed). **Step 2 (phases + goal
-links + `/goals?goal=<id>`) is LIVE** (user approved 2026-09-28). **Step 3 (phone quick-add +
-Unsorted tray) is LIVE** (approved 2026-09-28). Step 4 (images, migration `0022`) is in progress.
-
-➡ **The full handoff is in `BOARDS_PLAN.md`:** agreed decisions, file map, the step-1 eyeball
-checklist, and detailed task lists for step 2 (phases + goal links + `/goals?goal=<id>`),
-step 3 (phone quick-add + Unsorted tray) and step 4 (images, migration `0022`). Read it first
-next session.
+**Boards — SHIPPED (2026-09-28).** All four steps are live (canvas, phases + goal links,
+phone quick-add, images); `0021` and `0022` are applied. The summary and gotchas are in
+`PROGRESS_ARCHIVE.md`. Small follow-ups are under Open threads → Boards.
 
 **Heavy / light emphasis on est-1RM trends — SHIPPED (2026-09-22).** Migrations `0019` and `0020`
 are both applied and the split is live. Light days are their own series; heavy and unclassified
@@ -53,6 +47,13 @@ manual *numeric* goal can only move its bar by ticking milestones.
 - **Only `exercise_best_weight` was exercised end-to-end** of the 21 goal metric kinds. The
   school and work ones deserve a sanity check the first time a goal binds to them.
 
+### Boards follow-ups (small)
+- The phone bottom bar is now 6 tabs. Fine at 400 px; unchecked at 360 px.
+- Board patterns (idea = light + words, line = trace, phase = pool) are recorded only in
+  `board.css` / `phase.css` headers — `DESIGN_GUIDE.md` is at its baseline and cannot grow.
+- Not yet eyeballed: an idea linked to an *achieved* goal, and an image in the phone reading
+  view. Optional, never agreed: an "On board: X" link back from `GoalDetail`.
+
 ### Design work left from the "lit instrument" language
 `DESIGN_GUIDE.md` is the spec; these are the places the app has not caught up to it.
 - Section *order* is now a visual decision (the first section gets the light). No page has been
@@ -86,7 +87,7 @@ manual *numeric* goal can only move its bar by ticking milestones.
 
 ## State of the schema
 
-**Migrations `0001`–`0021` are all applied.** Assume `supabase/migrations/` matches the live
+**Migrations `0001`–`0022` are all applied.** Assume `supabase/migrations/` matches the live
 database. A new migration must ship with a matching `lib/db/types.ts` change — the pre-commit
 hook refuses the commit otherwise, because those types are hand-maintained.
 

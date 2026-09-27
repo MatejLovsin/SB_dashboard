@@ -9,9 +9,7 @@ import {
   deleteEdges,
   deleteNodes,
   setEdgeLabel,
-  updateNode,
   type BoardContents,
-  type NodePatch,
 } from '@/lib/queries/boards';
 import {
   isIdea,
@@ -22,11 +20,11 @@ import {
   toFlowNode,
   toPhaseNode,
   type BoardFlowNode,
-  type IdeaData,
   type LightFlowEdge,
 } from './boardFlow';
 import { usePhaseOps } from './usePhaseOps';
 import { useUnsorted } from './useUnsorted';
+import { useBoardImages, useSaveIdea } from './useIdeaImages';
 
 export type Attempt = <T>(what: string, run: () => Promise<T>) => Promise<{ value: T } | null>;
 export type SetNodes = Dispatch<SetStateAction<BoardFlowNode[]>>;
@@ -37,12 +35,16 @@ type SetEdges = Dispatch<SetStateAction<LightFlowEdge[]>>;
  * selection while you work; each finished gesture (a drop, a new line, a
  * delete) is written straight to Supabase. Nothing waits on a save button.
  */
-export function useBoardGraph({ board, phases, nodes: rows, edges: edgeRows }: BoardContents) {
+export function useBoardGraph(
+  { board, phases, nodes: rows, edges: edgeRows }: BoardContents,
+  imageUrls: Record<string, string>,
+) {
   const [nodes, setNodes, onNodesChange] = useNodesState<BoardFlowNode>(
     orderNodes(phases.map(toPhaseNode), rows.filter((r) => !r.unsorted).map(toFlowNode)),
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<LightFlowEdge>(edgeRows.map(toFlowEdge));
   const { error, attempt } = useAttempt();
+  const images = useBoardImages(board.id, imageUrls);
 
   return {
     nodes,
@@ -50,7 +52,9 @@ export function useBoardGraph({ board, phases, nodes: rows, edges: edgeRows }: B
     error,
     onNodesChange,
     onEdgesChange,
-    ...useNodeOps(board.id, attempt, setNodes, setEdges),
+    imageUrls: images.urls,
+    saveNode: useSaveIdea(attempt, setNodes, images),
+    ...useNodeOps(board.id, attempt, setNodes, setEdges, images.discard),
     ...usePhaseOps(board.id, attempt, setNodes),
     ...useUnsorted(board.id, rows.filter((r) => r.unsorted), attempt, setNodes),
     ...useEdgeOps(board.id, attempt, edges, setEdges),
@@ -75,7 +79,15 @@ function useAttempt() {
   return { error, attempt };
 }
 
-function useNodeOps(boardId: string, attempt: Attempt, setNodes: SetNodes, setEdges: SetEdges) {
+type Discard = (paths: (string | null)[]) => void;
+
+function useNodeOps(
+  boardId: string,
+  attempt: Attempt,
+  setNodes: SetNodes,
+  setEdges: SetEdges,
+  discardImages: Discard,
+) {
   const { getNodes } = useReactFlow<BoardFlowNode>();
 
   // Dropped inside a phase, a new idea is born a member of it.
@@ -96,43 +108,30 @@ function useNodeOps(boardId: string, attempt: Attempt, setNodes: SetNodes, setEd
   // Phases are not deletable by key, so only ideas arrive here — filter anyway.
   const onNodesDelete = useCallback(
     (deleted: BoardFlowNode[]) => {
-      const ids = deleted.filter(isIdea).map((n) => n.id);
-      void attempt('delete the idea', () => deleteNodes(createClient(), ids));
+      const ideas = deleted.filter(isIdea);
+      void attempt('delete the idea', () =>
+        deleteNodes(createClient(), ideas.map((n) => n.id)),
+      ).then((ok) => {
+        if (ok) discardImages(ideas.map((n) => n.data.imagePath));
+      });
     },
-    [attempt],
-  );
-
-  const saveNode = useCallback(
-    async (id: string, patch: NodePatch) => {
-      const ok = await attempt('save the idea', () => updateNode(createClient(), id, patch));
-      if (!ok) return false;
-      setNodes((prev) =>
-        prev.map((n) => (n.id === id && isIdea(n) ? { ...n, data: patchData(n.data, patch) } : n)),
-      );
-      return true;
-    },
-    [attempt, setNodes],
+    [attempt, discardImages],
   );
 
   const removeNode = useCallback(
     async (id: string) => {
+      const gone = getNodes().find((n) => n.id === id);
       const ok = await attempt('delete the idea', () => deleteNodes(createClient(), [id]));
       if (!ok) return;
+      if (gone && isIdea(gone)) discardImages([gone.data.imagePath]);
       setNodes((prev) => prev.filter((n) => n.id !== id));
       setEdges((prev) => prev.filter((e) => e.source !== id && e.target !== id));
     },
-    [attempt, setEdges, setNodes],
+    [attempt, discardImages, getNodes, setEdges, setNodes],
   );
 
-  return { addNode, onNodesDelete, saveNode, removeNode };
+  return { addNode, onNodesDelete, removeNode };
 }
-
-const patchData = (data: IdeaData, patch: NodePatch): IdeaData => ({
-  title: patch.title ?? data.title,
-  body: patch.body !== undefined ? patch.body : data.body,
-  done: patch.done ?? data.done,
-  goalId: patch.goal_id !== undefined ? patch.goal_id : data.goalId,
-});
 
 function useEdgeOps(boardId: string, attempt: Attempt, edges: LightFlowEdge[], setEdges: SetEdges) {
   const onConnect = useCallback(

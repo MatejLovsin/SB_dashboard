@@ -25,6 +25,8 @@ export interface BoardGoals {
 
 interface BoardContextValue {
   goals: BoardGoals;
+  /** Signed URLs for idea images, by storage path. */
+  images: Record<string, string>;
   canEdit: boolean;
   resizePhase: (id: string, rect: { x: number; y: number; width: number; height: number }) => void;
 }
@@ -34,6 +36,7 @@ interface BoardContextValue {
 // context. Node data stays plain rows.
 const BoardContext = createContext<BoardContextValue>({
   goals: { states: {}, options: [] },
+  images: {},
   canEdit: false,
   resizePhase: () => {},
 });
@@ -46,4 +49,10 @@ export const useBoardContext = () => useContext(BoardContext);
 export function useGoalState(goalId: string | null): GoalState | undefined {
   const { goals } = useBoardContext();
   return goalId ? goals.states[goalId] : undefined;
+}
+
+/** The signed URL for an idea's image, if it has one and it signed. */
+export function useImageUrl(path: string | null): string | undefined {
+  const { images } = useBoardContext();
+  return path ? images[path] : undefined;
 }

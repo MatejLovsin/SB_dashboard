@@ -11,6 +11,10 @@ export type GoalStatus = 'active' | 'achieved' | 'archived';
 export type GoalSource = 'manual' | 'auto';
 export type GoalDirection = 'up' | 'down';
 
+// Pages that can list a board at their foot. Stored as text[] in `boards.pages`.
+export type BoardPage = 'home' | 'fitness' | 'school' | 'work' | 'goals';
+export type BoardViewport = { x: number; y: number; zoom: number };
+
 // The binding on an auto goal, stored in `goals.metric`. The authoritative union
 // of shapes is `GoalMetric` in lib/queries/goals.ts — this stays loose because
 // the column is jsonb and adding a metric kind must not need a migration.
@@ -189,6 +193,30 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['goal_checkins']['Insert']>;
         Relationships: [];
       };
+      boards: {
+        Row: { id: string; user_id: string; name: string; description: string | null; pages: BoardPage[]; viewport: BoardViewport | null; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; name: string; description?: string | null; pages?: BoardPage[]; viewport?: BoardViewport | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['boards']['Insert']>;
+        Relationships: [];
+      };
+      board_phases: {
+        Row: { id: string; user_id: string; board_id: string; title: string; x: number; y: number; width: number; height: number; done: boolean; goal_id: string | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; board_id: string; title: string; x?: number; y?: number; width?: number; height?: number; done?: boolean; goal_id?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['board_phases']['Insert']>;
+        Relationships: [];
+      };
+      board_nodes: {
+        Row: { id: string; user_id: string; board_id: string; phase_id: string | null; title: string; body: string | null; x: number; y: number; unsorted: boolean; done: boolean; goal_id: string | null; updated_at: string } & Timestamps;
+        Insert: { id?: string; user_id?: string; board_id: string; phase_id?: string | null; title: string; body?: string | null; x?: number; y?: number; unsorted?: boolean; done?: boolean; goal_id?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['board_nodes']['Insert']>;
+        Relationships: [];
+      };
+      board_edges: {
+        Row: { id: string; user_id: string; board_id: string; source_id: string; target_id: string; label: string | null } & Timestamps;
+        Insert: { id?: string; user_id?: string; board_id: string; source_id: string; target_id: string; label?: string | null; created_at?: string };
+        Update: Partial<Database['public']['Tables']['board_edges']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -233,3 +261,7 @@ export type CardioEntry = Tables<'cardio_entries'>;
 export type Goal = Tables<'goals'>;
 export type GoalMilestone = Tables<'goal_milestones'>;
 export type GoalCheckin = Tables<'goal_checkins'>;
+export type Board = Tables<'boards'>;
+export type BoardPhase = Tables<'board_phases'>;
+export type BoardNode = Tables<'board_nodes'>;
+export type BoardEdge = Tables<'board_edges'>;

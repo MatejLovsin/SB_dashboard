@@ -20,6 +20,8 @@ import {
   notesPerWeek,
   focusScoreSeries,
 } from '@/lib/queries/work';
+import { Suspense } from 'react';
+import { BoardsFooter } from '@/features/boards/BoardsFooter';
 
 export default async function WorkPage() {
   const supabase = await createClient();
@@ -113,6 +115,9 @@ export default async function WorkPage() {
           focusScoreSeries={focusSeries}
         />
       </section>
+      <Suspense fallback={null}>
+        <BoardsFooter page="work" />
+      </Suspense>
     </div>
   );
 }

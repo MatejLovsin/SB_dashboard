@@ -1,0 +1,174 @@
+/*
+ * The board canvas in the "lit instrument" language: no cards, no boxes. An
+ * idea is a point of light with its words beside it; a line is a thin trace of
+ * the section's light; the canvas is the page itself with a faint dot grid.
+ *
+ * Everything takes its colour from the theme tokens (--accent-rgb, --foreground,
+ * --muted, --border), so the board relights with the section like every other
+ * surface. React Flow's own base.css provides layout only.
+ */
+
+.board-canvas {
+  --idea-ring: var(--muted);
+  --line: rgba(var(--accent-rgb), 0.38);
+  --line-lit: rgba(var(--accent-rgb), 0.9);
+
+  --xy-background-color: transparent;
+  --xy-background-pattern-color: rgba(255, 255, 255, 0.07);
+  --xy-selection-background-color: rgba(var(--accent-rgb), 0.06);
+  --xy-selection-border: 1px solid rgba(var(--accent-rgb), 0.35);
+  --xy-connectionline-stroke: var(--line-lit);
+  --xy-connectionline-stroke-width: 1.5;
+}
+
+.board-canvas .react-flow__pane {
+  cursor: default;
+}
+.board-canvas .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
+/* ── Ideas ─────────────────────────────────────────────────────────────── */
+
+.idea-node {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 240px;
+  padding: 4px 6px 4px 0;
+  cursor: grab;
+}
+.react-flow__node.dragging .idea-node {
+  cursor: grabbing;
+}
+
+.idea-light {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--idea-ring);
+  background: transparent;
+  transition:
+    box-shadow var(--dur-fast) var(--ease-out-quint),
+    border-color var(--dur-fast) var(--ease-out-quint),
+    background var(--dur-fast) var(--ease-out-quint),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+/* The handle is laid exactly over the light, invisible: the light IS the
+ * connector. It is a little larger than the dot so it is easy to catch. */
+.board-canvas .react-flow__handle.idea-handle {
+  left: -2px;
+  top: 5px;
+  right: auto;
+  width: 16px;
+  height: 16px;
+  min-width: 0;
+  min-height: 0;
+  transform: none;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+}
+.board-canvas .react-flow__handle.idea-handle.connectionindicator {
+  cursor: crosshair;
+}
+
+.idea-node:hover .idea-light {
+  border-color: rgba(var(--accent-rgb), 0.9);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
+  transform: scale(1.15);
+}
+
+.idea-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.idea-excerpt {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Selected: the light takes the section accent and the words brighten. */
+.idea-node[data-selected='true'] .idea-light {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 4px rgba(var(--accent-rgb), 0.14),
+    0 0 14px rgba(var(--accent-rgb), 0.45);
+}
+
+/* Done by hand: the light is lit. A goal-completed idea burns brighter still,
+ * in the goals amber — that state lands with goal links. */
+.idea-node[data-done='true'] .idea-light {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.55);
+}
+.idea-node[data-done='true'] .idea-title {
+  color: var(--muted);
+}
+
+/* ── Lines ─────────────────────────────────────────────────────────────── */
+
+.board-canvas .react-flow__edge-path.light-edge {
+  stroke: var(--line);
+  stroke-width: 1.25;
+  transition: stroke var(--dur-fast) var(--ease-out-quint);
+}
+.board-canvas .react-flow__edge:hover .light-edge,
+.board-canvas .react-flow__edge.selected .light-edge {
+  stroke: var(--line-lit);
+  filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6));
+}
+
+.light-edge-label {
+  position: absolute;
+  pointer-events: none;
+  padding: 1px 6px;
+  font-family: var(--type-label);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  /* Cuts the line so the words sit in a gap rather than on top of it. */
+  background: var(--background);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────── */
+
+.board-canvas .react-flow__controls {
+  box-shadow: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.board-canvas .react-flow__controls-button {
+  width: 30px;
+  height: 30px;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  fill: currentColor;
+}
+.board-canvas .react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--foreground);
+}
+.board-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}

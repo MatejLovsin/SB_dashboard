@@ -21,6 +21,8 @@ import {
   studyStreakDays,
 } from '@/lib/queries/school';
 import { deltaPercent } from '@/lib/utils/stats';
+import { Suspense } from 'react';
+import { BoardsFooter } from '@/features/boards/BoardsFooter';
 
 export default async function SchoolPage() {
   const supabase = await createClient();
@@ -154,6 +156,9 @@ export default async function SchoolPage() {
           </Card>
         </Link>
       </div>
+      <Suspense fallback={null}>
+        <BoardsFooter page="school" />
+      </Suspense>
     </div>
   );
 }

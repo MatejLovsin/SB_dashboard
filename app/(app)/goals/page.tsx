@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { listMetricOptions, listResolvedGoals } from '@/lib/queries/goals';
 import { GoalsBoard } from '@/features/goals/GoalsBoard';
+import { Suspense } from 'react';
+import { BoardsFooter } from '@/features/boards/BoardsFooter';
 
 // Resolution happens here, on the server: an auto goal's progress is derived from
 // the tables it reads (see lib/queries/goals.ts), which would mean shipping the
@@ -18,6 +20,9 @@ export default async function GoalsPage() {
   return (
     <div className="space-y-4">
       <GoalsBoard active={active} achieved={achieved} options={options} />
+      <Suspense fallback={null}>
+        <BoardsFooter page="goals" />
+      </Suspense>
     </div>
   );
 }

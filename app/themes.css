@@ -83,3 +83,18 @@
   --chart-5: #d97706;
   --chart-6: #b45309;
 }
+
+/* Boards — violet. Lighter and redder than home's indigo so the two never read
+ * as the same section; the canvas's lines and phases take their light from it. */
+:root[data-theme='boards'],
+[data-theme='boards'] {
+  --accent-rgb: 167, 139, 250;
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --chart-1: #ede9fe;
+  --chart-2: #ddd6fe;
+  --chart-3: #c4b5fd;
+  --chart-4: #a78bfa;
+  --chart-5: #8b5cf6;
+  --chart-6: #7c3aed;
+}

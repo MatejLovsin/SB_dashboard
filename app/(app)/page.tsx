@@ -8,6 +8,8 @@ import { CountUp } from '@/components/ui/CountUp';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { Card } from '@/components/ui/Card';
 import { TodoDashboard } from '@/features/todos/TodoDashboard';
+import { Suspense } from 'react';
+import { BoardsFooter } from '@/features/boards/BoardsFooter';
 
 function fmtVol(kg: number): number {
   return kg;
@@ -184,6 +186,9 @@ export default async function HomePage() {
           )}
         </div>
       </Card>
+      <Suspense fallback={null}>
+        <BoardsFooter page="home" />
+      </Suspense>
     </div>
   );
 }

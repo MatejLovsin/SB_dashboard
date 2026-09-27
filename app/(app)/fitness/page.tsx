@@ -14,6 +14,8 @@ import { PinnedLifts } from '@/features/fitness/PinnedLifts';
 import { WeekProgramme } from '@/features/fitness/WeekProgramme';
 import { getPinnedLiftTrends, getFitnessHubMetrics } from '@/lib/queries/analytics';
 import { listProgrammeDays } from '@/lib/queries/programme';
+import { Suspense } from 'react';
+import { BoardsFooter } from '@/features/boards/BoardsFooter';
 
 async function getRecentExerciseNames(count = 5): Promise<string[]> {
   const supabase = await createClient();
@@ -231,6 +233,9 @@ export default async function FitnessPage() {
           </Card>
         </Link>
       </div>
+      <Suspense fallback={null}>
+        <BoardsFooter page="fitness" />
+      </Suspense>
     </div>
   );
 }

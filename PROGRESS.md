@@ -10,6 +10,15 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
+**Boards (whiteboard per project) — step 1 of 4 LIVE (2026-09-28).** `0021_boards` is applied
+and the canvas was eyeballed by the user. Step 2 (phases + goal links + `/goals?goal=<id>`) is
+next.
+
+➡ **The full handoff is in `BOARDS_PLAN.md`:** agreed decisions, file map, the step-1 eyeball
+checklist, and detailed task lists for step 2 (phases + goal links + `/goals?goal=<id>`),
+step 3 (phone quick-add + Unsorted tray) and step 4 (images, migration `0022`). Read it first
+next session.
+
 **Heavy / light emphasis on est-1RM trends — SHIPPED (2026-09-22).** Migrations `0019` and `0020`
 are both applied and the split is live. Light days are their own series; heavy and unclassified
 days share the main line. `lib/utils/emphasis.ts` is the one rule every screen reads it through,
@@ -76,7 +85,7 @@ manual *numeric* goal can only move its bar by ticking milestones.
 
 ## State of the schema
 
-**Migrations `0001`–`0020` are all applied.** Assume `supabase/migrations/` matches the live
+**Migrations `0001`–`0021` are all applied.** Assume `supabase/migrations/` matches the live
 database. A new migration must ship with a matching `lib/db/types.ts` change — the pre-commit
 hook refuses the commit otherwise, because those types are hand-maintained.
 

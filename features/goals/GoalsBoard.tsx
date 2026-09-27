@@ -25,15 +25,19 @@ interface GoalsBoardProps {
   active: ResolvedGoal[];
   achieved: ResolvedGoal[];
   options: MetricOptions;
+  /** From `/goals?goal=<id>` — a board's link into one exact goal. */
+  initialGoalId?: string;
 }
 
 type Editing = { mode: 'new' } | { mode: 'edit'; goal: ResolvedGoal } | null;
 
-export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
+export function GoalsBoard({ active, achieved, options, initialGoalId }: GoalsBoardProps) {
   const router = useRouter();
   const [editing, setEditing] = useState<Editing>(null);
   // The id outlives `open`, so the panel keeps its content while it fades out.
-  const [viewing, setViewing] = useState<{ id: string; open: boolean } | null>(null);
+  const [viewing, setViewing] = useState<{ id: string; open: boolean } | null>(
+    initialGoalId ? { id: initialGoalId, open: true } : null,
+  );
   // Optimistic ticks, keyed by milestone id, cleared when the refresh lands.
   const [ticks, setTicks] = useState<Record<string, boolean>>({});
 
@@ -167,7 +171,11 @@ export function GoalsBoard({ active, achieved, options }: GoalsBoardProps) {
 
       <FocusOverlay
         open={viewing?.open === true && viewed !== undefined}
-        onClose={() => setViewing((v) => (v ? { ...v, open: false } : null))}
+        onClose={() => {
+          setViewing((v) => (v ? { ...v, open: false } : null));
+          // Drop `?goal=` so a refresh does not reopen it; no server round-trip.
+          if (initialGoalId) window.history.replaceState(null, '', '/goals');
+        }}
         size="reading"
         title={viewed?.goal.title}
         action={

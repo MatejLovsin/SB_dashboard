@@ -54,68 +54,39 @@ A whiteboard per project, n8n-like canvas, "lit instrument" styling.
 
 ---
 
-## 2. Step 2 — phases + goal links (next)
+## 2. Step 2 — phases + goal links: LIVE (approved + committed 2026-09-28)
 
-No migration needed: `board_phases` and the `goal_id` / `phase_id` columns already exist.
+`npm run check` + `npm run build` pass. Exercised in the browser on a throwaway board (since
+deleted): add phase, link a goal (amber trace shows), double-click inside the pool adds an idea
+*into* the phase, dragging the phase carries its ideas, dragging an idea out unparents it, all
+persisted across reload; `/goals?goal=<id>` opens that goal's overlay.
 
-### 2a. Phases
-- **Flow node type `phase`** (`features/boards/PhaseNode.tsx`): a pool of light, not a box —
-  radial `rgba(var(--accent-rgb), .06)` wash, no border, uppercase `.label` title top-left.
-  Use React Flow's `NodeResizer` (desktop only, `isVisible={selected}`) and save
-  `width/height` on resize end (`onResizeEnd`).
-- **Ordering rule:** React Flow requires **parents before children** in the `nodes` array.
-  Build the array as `[...phases.map(toPhaseNode), ...ideas.map(toFlowNode)]`. Phase nodes get
-  `zIndex: -1`, `style: { width, height }`, `dragHandle: '.phase-title'` so dragging inside the
-  pool does not move the whole phase.
-- An idea in a phase: `parentId: phase_id`, position is **relative** (that's what's stored).
-  Do **not** set `extent: 'parent'` — ideas must be able to leave a phase.
-- **Reparenting on drop** (`onNodeDragStop`): for each dragged idea, find the phase whose
-  absolute rect contains the idea's absolute position (`useReactFlow().getInternalNode(id)
-  .internals.positionAbsolute`). If it changed, convert the position (absolute − phase origin,
-  or back to absolute when leaving) and write `{ phase_id, x, y }`. Extend `moveNodes` to
-  accept an optional `phase_id`, or add a `reparentNode` query.
-- **Create**: a "+ Phase" button next to "+ Idea" (desktop), placed at viewport centre, default
-  480×320, opens a small title form. Double-click the phase title to rename / delete.
-- **Delete phase**: first rewrite its children to absolute positions with `phase_id = null`,
-  then delete the row (the FK is `on delete set null`, but positions would be left relative).
-- Add queries to `lib/queries/boards.ts`: `createPhase`, `updatePhase`, `deletePhase`.
-  `boards.ts` is ~180 lines. If it approaches 300, move phases into `lib/queries/boardPhases.ts`.
-- `useBoardGraph.ts` is exactly 200 lines. Put phase ops in a new `usePhaseOps.ts` rather than
-  growing it. The node union type becomes `IdeaFlowNode | PhaseFlowNode`.
+| File | Role |
+|---|---|
+| `features/boards/boardFlow.ts` | Flow types (`IdeaFlowNode \| PhaseFlowNode`), converters, `orderNodes` (phases first), and the pure membership rule: `phaseAt`, `placeIdea`, `settleIdeas` |
+| `features/boards/usePhaseOps.ts` | `useMembership` (drag stop, resize end → `settleIdeas` + writes) and `usePhaseCrud` (add/save/remove) |
+| `features/boards/boardContext.tsx` | `BoardGoals` `{states, options}`, `canEdit`, `resizePhase` for custom nodes |
+| `features/boards/goalLinks.tsx` | `GoalTrace`, `GoalLinkField` (select by section), `GoalLinkStatus` (→ `/goals?goal=`) |
+| `features/boards/PhaseNode.tsx` · `PhasePanel.tsx` · `phase.css` | The pool, its settings, its styling |
+| `features/boards/CanvasOverlays.tsx` · `CanvasHint.tsx` | Split out of `BoardCanvas.tsx` |
+| `lib/queries/boardPhases.ts` | `createPhase`, `updatePhase`, `deletePhase` (children → absolute first) |
+| `lib/queries/boards.ts` | `moveNodes` accepts `phase_id`; `createNode` accepts `phase_id` |
+| `components/ui/FocusOverlay.tsx` | Renders nothing on the server — an overlay open on first render crashed SSR (`document is not defined`) |
 
-### 2b. Goal links
-- **Data**: in `app/(app)/boards/[id]/page.tsx`, also call
-  `listResolvedGoals(supabase, {})`. Passing `{}` means **all statuses**. The default arg is
-  `{status:'active'}`. Pass two things down:
-  - `goalOptions`: active goals `{id, title, section}` for the picker
-  - `goalStates: Record<goalId, { title, percent, achieved }>` for linked goals, with
-    `achieved = r.achieved || r.goal.status === 'achieved'`.
+Rules as built: membership is **geometry** — after any drop, resize or new phase, each idea
+belongs to the smallest phase containing its light. A phase's pool is `pointer-events:none`;
+only its title (drag handle / double-click to edit) and resize grips catch the pointer.
+Phases are `deletable:false` (React Flow would delete children with a parent) — delete from
+the phase panel, which keeps the ideas. The board page resolves **all** goals once;
+`states` covers every goal, `options` only active ones, so linking needs no refresh.
 
-  This is one call with a shared memo, which is cheaper than `getResolvedGoal` per link.
-- **Picker**: in `NodePanel` (and the phase form), a "Linked goal" `<select>` grouped by section,
-  plus "None". Save via `updateNode({ goal_id })` / `updatePhase`. After linking, call
-  `router.refresh()` so `goalStates` includes the newly linked goal (flow state is initialised
-  once, so also patch the node's `data.goalId` locally).
-- **Node visuals** (add to `IdeaData`: `goalId`, and look up `goalStates[goalId]` at render
-  through a small React context, `GoalStatesContext`, so node data stays serialisable):
-  - in progress: a 2 px amber bar under the title, width = `percent`%.
-  - achieved: `data-goal="achieved"` → light filled amber with a stronger glow, title amber-tinted.
-    Must read **brighter than manual done**. Lines touching an achieved node take the amber too
-    (pass `achieved` via edge `className` computed in `useBoardGraph`).
-  - Define `--goal-rgb: 245, 158, 11` in `board.css` under `.board-canvas`. It is the goals
-    theme triplet; comment that it mirrors `[data-theme='goals']` in `app/themes.css`. Do not
-    hardcode hex in TSX (ESLint blocks it).
-  - Phase achieved → the whole pool glows amber.
-- **"Open goal" link**: in `NodePanel` (both reading and editing views), show the goal title
-  and percent, and a link to `/goals?goal=<id>`.
-- **Deep link on `/goals`**: `app/(app)/goals/page.tsx` takes
-  `searchParams: Promise<{ goal?: string }>` (Next 16: async). Pass `initialGoalId` to
-  `GoalsBoard` and initialise `viewing` with
-  `useState(initialGoalId ? { id: initialGoalId, open: true } : null)`. The overlay already
-  finds the goal in `active` or `achieved`. `GoalsBoard.tsx` is 224 lines, so there is room.
-  Optionally `router.replace('/goals')` on close so a refresh does not reopen it.
-- Optional reverse link: in `GoalDetail`, "On board: X". Needs a query of `board_nodes` /
-  `board_phases` by `goal_id` (partial indexes exist). Nice to have, not agreed. Ask first.
+### Step 2 eyeball (user)
+- [ ] Resize a phase from its **top-left** grip, reload → ideas stayed put on screen.
+- [ ] Link an idea to an **achieved** goal → amber light brighter than done; its lines amber.
+- [ ] Phone width: tap a phase title → read view; tap "open goal" link → lands on that goal.
+- [ ] The pool's soft edge reads as light, not as a box. Tune `phase.css` if not.
+
+Not done (optional, ask first): the reverse "On board: X" link inside `GoalDetail`.
 
 ---
 

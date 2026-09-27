@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getStraightPath, type EdgeProps } from '@xyflow/react';
-import type { LightFlowEdge } from './useBoardGraph';
+import type { LightFlowEdge } from './boardFlow';
 
 // A line between two ideas is a thin trace of light, straight from one to the
 // other — it only ever means "related", so it has no arrow and no curve that

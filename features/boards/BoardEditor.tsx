@@ -13,10 +13,11 @@ import {
   type BoardContents,
   type BoardInput,
 } from '@/lib/queries/boards';
+import type { BoardGoals } from './boardContext';
 import { BoardCanvas } from './BoardCanvas';
 import { BoardForm } from './BoardForm';
 
-export function BoardEditor({ contents }: { contents: BoardContents }) {
+export function BoardEditor({ contents, goals }: { contents: BoardContents; goals: BoardGoals }) {
   const router = useRouter();
   const { board } = contents;
   const [editing, setEditing] = useState(false);
@@ -72,7 +73,7 @@ export function BoardEditor({ contents }: { contents: BoardContents }) {
       </header>
 
       <ReactFlowProvider>
-        <BoardCanvas contents={contents} />
+        <BoardCanvas contents={contents} goals={goals} />
       </ReactFlowProvider>
 
       <FocusOverlay open={editing} onClose={() => setEditing(false)} title="Board">

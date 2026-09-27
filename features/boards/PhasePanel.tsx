@@ -2,50 +2,43 @@
 
 import { useState } from 'react';
 import { Circle, CircleCheck } from 'lucide-react';
-import type { NodePatch } from '@/lib/queries/boards';
+import type { PhasePatch } from '@/lib/queries/boardPhases';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Markdown } from '@/components/ui/Markdown';
-import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
-import type { IdeaData } from './boardFlow';
+import type { PhaseData } from './boardFlow';
 import { GoalLinkField, GoalLinkStatus } from './goalLinks';
 
-interface NodePanelProps {
-  data: IdeaData;
+interface PhasePanelProps {
+  data: PhaseData;
   canEdit: boolean;
-  onSave: (patch: NodePatch) => Promise<boolean>;
+  onSave: (patch: PhasePatch) => Promise<boolean>;
   onDelete: () => void;
   onClose: () => void;
 }
 
-// The inside of an idea: its full markdown note. Desktop edits it; the phone
-// reads it.
-export function NodePanel({ data, canEdit, onSave, onDelete, onClose }: NodePanelProps) {
-  if (!canEdit) return <NodeReading data={data} />;
-  return <NodeEditing data={data} onSave={onSave} onDelete={onDelete} onClose={onClose} />;
+// A phase's settings: its name, done, and the goal it answers to. Deleting it
+// keeps its ideas on the canvas.
+export function PhasePanel({ data, canEdit, onSave, onDelete, onClose }: PhasePanelProps) {
+  if (!canEdit) {
+    return (
+      <div className="space-y-4">
+        <GoalLinkStatus goalId={data.goalId} />
+        {data.done ? (
+          <span className="label flex items-center gap-1.5 text-[11px] text-accent">
+            <CircleCheck className="h-3.5 w-3.5" /> Done
+          </span>
+        ) : null}
+        {!data.goalId && !data.done ? (
+          <p className="text-sm text-muted">A phase of this board.</p>
+        ) : null}
+      </div>
+    );
+  }
+  return <PhaseEditing data={data} onSave={onSave} onDelete={onDelete} onClose={onClose} />;
 }
 
-function NodeReading({ data }: { data: IdeaData }) {
-  return (
-    <div className="space-y-4">
-      <GoalLinkStatus goalId={data.goalId} />
-      {data.done ? (
-        <span className="label flex items-center gap-1.5 text-[11px] text-accent">
-          <CircleCheck className="h-3.5 w-3.5" /> Done
-        </span>
-      ) : null}
-      {data.body ? (
-        <Markdown>{data.body}</Markdown>
-      ) : (
-        <p className="text-sm text-muted">No notes on this idea yet.</p>
-      )}
-    </div>
-  );
-}
-
-function NodeEditing({ data, onSave, onDelete, onClose }: Omit<NodePanelProps, 'canEdit'>) {
+function PhaseEditing({ data, onSave, onDelete, onClose }: Omit<PhasePanelProps, 'canEdit'>) {
   const [title, setTitle] = useState(data.title);
-  const [body, setBody] = useState(data.body ?? '');
   const [done, setDone] = useState(data.done);
   const [goalId, setGoalId] = useState(data.goalId ?? '');
   const [pending, setPending] = useState(false);
@@ -55,12 +48,7 @@ function NodeEditing({ data, onSave, onDelete, onClose }: Omit<NodePanelProps, '
     e.preventDefault();
     if (!title.trim()) return;
     setPending(true);
-    const ok = await onSave({
-      title: title.trim(),
-      body: body.trim() ? body : null,
-      done,
-      goal_id: goalId || null,
-    });
+    const ok = await onSave({ title: title.trim(), done, goal_id: goalId || null });
     setPending(false);
     if (ok) onClose();
   }
@@ -68,22 +56,13 @@ function NodeEditing({ data, onSave, onDelete, onClose }: Omit<NodePanelProps, '
   return (
     <form onSubmit={submit} className="space-y-4">
       <Input
-        label="Idea"
-        id="idea-title"
+        label="Phase"
+        id="phase-title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onFocus={(e) => e.currentTarget.select()}
         required
         autoFocus
-      />
-      <MarkdownEditor
-        label="Notes"
-        id="idea-body"
-        value={body}
-        onChange={setBody}
-        placeholder="Why it matters, what it needs, open questions…"
-        rows={8}
-        maxRows={26}
       />
       <button
         type="button"
@@ -112,7 +91,7 @@ function NodeEditing({ data, onSave, onDelete, onClose }: Omit<NodePanelProps, '
           className="ml-auto"
           onClick={() => (confirming ? onDelete() : setConfirming(true))}
         >
-          {confirming ? 'Delete for good?' : 'Delete idea'}
+          {confirming ? 'Delete? Ideas stay' : 'Delete phase'}
         </Button>
       </div>
     </form>

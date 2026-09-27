@@ -1,49 +1,34 @@
 'use client';
 
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
-import {
-  useEdgesState,
-  useNodesState,
-  type Connection,
-  type Edge,
-  type Node,
-  type OnNodeDrag,
-} from '@xyflow/react';
-import type { BoardEdge, BoardNode } from '@/lib/db/types';
+import { useEdgesState, useNodesState, useReactFlow, type Connection } from '@xyflow/react';
 import { createClient } from '@/lib/supabase/client';
 import {
   createEdge,
   createNode,
   deleteEdges,
   deleteNodes,
-  moveNodes,
   setEdgeLabel,
   updateNode,
   type BoardContents,
   type NodePatch,
 } from '@/lib/queries/boards';
+import {
+  isIdea,
+  orderNodes,
+  phaseRects,
+  placeIdea,
+  toFlowEdge,
+  toFlowNode,
+  toPhaseNode,
+  type BoardFlowNode,
+  type IdeaData,
+  type LightFlowEdge,
+} from './boardFlow';
+import { usePhaseOps } from './usePhaseOps';
 
-export type IdeaData = { title: string; body: string | null; done: boolean };
-export type IdeaFlowNode = Node<IdeaData, 'idea'>;
-export type LightFlowEdge = Edge<{ label: string | null }, 'light'>;
-
-export const toFlowNode = (row: BoardNode): IdeaFlowNode => ({
-  id: row.id,
-  type: 'idea',
-  position: { x: row.x, y: row.y },
-  data: { title: row.title, body: row.body, done: row.done },
-});
-
-export const toFlowEdge = (row: BoardEdge): LightFlowEdge => ({
-  id: row.id,
-  type: 'light',
-  source: row.source_id,
-  target: row.target_id,
-  data: { label: row.label },
-});
-
-type Attempt = <T>(what: string, run: () => Promise<T>) => Promise<{ value: T } | null>;
-type SetNodes = Dispatch<SetStateAction<IdeaFlowNode[]>>;
+export type Attempt = <T>(what: string, run: () => Promise<T>) => Promise<{ value: T } | null>;
+export type SetNodes = Dispatch<SetStateAction<BoardFlowNode[]>>;
 type SetEdges = Dispatch<SetStateAction<LightFlowEdge[]>>;
 
 /**
@@ -51,9 +36,9 @@ type SetEdges = Dispatch<SetStateAction<LightFlowEdge[]>>;
  * selection while you work; each finished gesture (a drop, a new line, a
  * delete) is written straight to Supabase. Nothing waits on a save button.
  */
-export function useBoardGraph({ board, nodes: rows, edges: edgeRows }: BoardContents) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<IdeaFlowNode>(
-    rows.filter((r) => !r.unsorted).map(toFlowNode),
+export function useBoardGraph({ board, phases, nodes: rows, edges: edgeRows }: BoardContents) {
+  const [nodes, setNodes, onNodesChange] = useNodesState<BoardFlowNode>(
+    orderNodes(phases.map(toPhaseNode), rows.filter((r) => !r.unsorted).map(toFlowNode)),
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<LightFlowEdge>(edgeRows.map(toFlowEdge));
   const { error, attempt } = useAttempt();
@@ -65,6 +50,7 @@ export function useBoardGraph({ board, nodes: rows, edges: edgeRows }: BoardCont
     onNodesChange,
     onEdgesChange,
     ...useNodeOps(board.id, attempt, setNodes, setEdges),
+    ...usePhaseOps(board.id, attempt, setNodes),
     ...useEdgeOps(board.id, attempt, edges, setEdges),
   };
 }
@@ -88,39 +74,29 @@ function useAttempt() {
 }
 
 function useNodeOps(boardId: string, attempt: Attempt, setNodes: SetNodes, setEdges: SetEdges) {
+  const { getNodes } = useReactFlow<BoardFlowNode>();
+
+  // Dropped inside a phase, a new idea is born a member of it.
   const addNode = useCallback(
     async (position: { x: number; y: number }) => {
+      const place = placeIdea(position, phaseRects(getNodes()));
       const created = await attempt('add the idea', () =>
-        createNode(createClient(), {
-          board_id: boardId,
-          title: 'New idea',
-          x: Math.round(position.x),
-          y: Math.round(position.y),
-        }),
+        createNode(createClient(), { board_id: boardId, title: 'New idea', ...place }),
       );
       if (!created) return undefined;
       const node = toFlowNode(created.value);
       setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), node]);
       return node.id;
     },
-    [attempt, boardId, setNodes],
+    [attempt, boardId, getNodes, setNodes],
   );
 
-  const onNodeDragStop: OnNodeDrag<IdeaFlowNode> = useCallback(
-    (_event, _node, dragged) => {
-      const moves = dragged.map((n) => ({
-        id: n.id,
-        x: Math.round(n.position.x),
-        y: Math.round(n.position.y),
-      }));
-      void attempt('save the new position', () => moveNodes(createClient(), moves));
-    },
-    [attempt],
-  );
-
+  // Phases are not deletable by key, so only ideas arrive here — filter anyway.
   const onNodesDelete = useCallback(
-    (deleted: IdeaFlowNode[]) =>
-      void attempt('delete the idea', () => deleteNodes(createClient(), deleted.map((n) => n.id))),
+    (deleted: BoardFlowNode[]) => {
+      const ids = deleted.filter(isIdea).map((n) => n.id);
+      void attempt('delete the idea', () => deleteNodes(createClient(), ids));
+    },
     [attempt],
   );
 
@@ -129,7 +105,7 @@ function useNodeOps(boardId: string, attempt: Attempt, setNodes: SetNodes, setEd
       const ok = await attempt('save the idea', () => updateNode(createClient(), id, patch));
       if (!ok) return false;
       setNodes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, data: patchData(n.data, patch) } : n)),
+        prev.map((n) => (n.id === id && isIdea(n) ? { ...n, data: patchData(n.data, patch) } : n)),
       );
       return true;
     },
@@ -146,13 +122,14 @@ function useNodeOps(boardId: string, attempt: Attempt, setNodes: SetNodes, setEd
     [attempt, setEdges, setNodes],
   );
 
-  return { addNode, onNodeDragStop, onNodesDelete, saveNode, removeNode };
+  return { addNode, onNodesDelete, saveNode, removeNode };
 }
 
 const patchData = (data: IdeaData, patch: NodePatch): IdeaData => ({
   title: patch.title ?? data.title,
   body: patch.body !== undefined ? patch.body : data.body,
   done: patch.done ?? data.done,
+  goalId: patch.goal_id !== undefined ? patch.goal_id : data.goalId,
 });
 
 function useEdgeOps(boardId: string, attempt: Attempt, edges: LightFlowEdge[], setEdges: SetEdges) {

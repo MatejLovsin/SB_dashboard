@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useMountTransition } from '@/lib/hooks/useMountTransition';
@@ -54,6 +54,9 @@ export function FocusOverlay({
 }: FocusOverlayProps) {
   const s = sizeClasses[size];
   const { mounted, entered } = useMountTransition(open, 480);
+  // The portal target only exists in the browser. An overlay that is open on
+  // first render (e.g. /goals?goal=<id>) must render nothing on the server.
+  const onClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
@@ -82,7 +85,7 @@ export function FocusOverlay({
     if (entered) panelRef.current?.focus();
   }, [entered]);
 
-  if (!mounted) return null;
+  if (!mounted || !onClient) return null;
 
   return createPortal(
     <div
@@ -143,3 +146,5 @@ export function FocusOverlay({
     document.body,
   );
 }
+
+const noopSubscribe = () => () => {};

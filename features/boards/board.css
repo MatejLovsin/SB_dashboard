@@ -1,7 +1,9 @@
 /*
  * The board canvas in the "lit instrument" language: no cards, no boxes. An
  * idea is a point of light with its words beside it; a line is a thin trace of
- * the section's light; the canvas is the page itself with a faint dot grid.
+ * the section's light; a phase is a pool of light, not a box; the canvas is the
+ * page itself with a faint dot grid. A linked goal speaks in the goals amber:
+ * a thin trace while open, a burning light once achieved — brighter than done.
  *
  * Everything takes its colour from the theme tokens (--accent-rgb, --foreground,
  * --muted, --border), so the board relights with the section like every other
@@ -9,6 +11,8 @@
  */
 
 .board-canvas {
+  /* The goals theme triplet — mirrors [data-theme='goals'] in app/themes.css. */
+  --goal-rgb: 245, 158, 11;
   --idea-ring: var(--muted);
   --line: rgba(var(--accent-rgb), 0.38);
   --line-lit: rgba(var(--accent-rgb), 0.9);
@@ -111,7 +115,7 @@
 }
 
 /* Done by hand: the light is lit. A goal-completed idea burns brighter still,
- * in the goals amber — that state lands with goal links. */
+ * in the goals amber (below). */
 .idea-node[data-done='true'] .idea-light {
   border-color: var(--accent);
   background: var(--accent);
@@ -119,6 +123,58 @@
 }
 .idea-node[data-done='true'] .idea-title {
   color: var(--muted);
+}
+
+/* ── Goals ─────────────────────────────────────────────────────────────── */
+
+/* An open goal: a 2px amber trace under the title, filled to its percent. */
+.goal-trace {
+  display: block;
+  width: 100%;
+  max-width: 140px;
+  height: 2px;
+  margin-top: 5px;
+  border-radius: 9999px;
+  background: rgba(var(--goal-rgb), 0.16);
+  overflow: hidden;
+}
+.goal-trace > span {
+  display: block;
+  height: 100%;
+  background: rgb(var(--goal-rgb));
+  box-shadow: 0 0 6px rgba(var(--goal-rgb), 0.6);
+}
+
+/* Achieved: the light burns amber, well past a manual done. */
+.idea-node[data-goal='achieved'] .idea-light {
+  border-color: rgb(var(--goal-rgb));
+  background: rgb(var(--goal-rgb));
+  box-shadow:
+    0 0 0 3px rgba(var(--goal-rgb), 0.18),
+    0 0 18px rgba(var(--goal-rgb), 0.8);
+}
+.idea-node[data-goal='achieved'] .idea-title {
+  color: rgba(var(--goal-rgb), 0.95);
+}
+
+.board-canvas .react-flow__edge.goal-lit .light-edge {
+  stroke: rgba(var(--goal-rgb), 0.6);
+}
+.board-canvas .react-flow__edge.goal-lit:hover .light-edge,
+.board-canvas .react-flow__edge.goal-lit.selected .light-edge {
+  stroke: rgba(var(--goal-rgb), 0.95);
+  filter: drop-shadow(0 0 4px rgba(var(--goal-rgb), 0.6));
+}
+
+/* The link to the goal inside an idea's or phase's panel. */
+.goal-link {
+  color: var(--foreground);
+}
+.goal-link .label {
+  color: rgb(var(--goal-rgb));
+}
+.goal-link[data-goal='achieved'] {
+  color: rgb(var(--goal-rgb));
 }
 
 /* ── Lines ─────────────────────────────────────────────────────────────── */

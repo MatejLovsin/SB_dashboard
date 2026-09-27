@@ -116,7 +116,14 @@ export type NodePatch = Partial<
 
 export async function createNode(
   client: Client,
-  input: { board_id: string; title: string; x?: number; y?: number; unsorted?: boolean },
+  input: {
+    board_id: string;
+    title: string;
+    x?: number;
+    y?: number;
+    unsorted?: boolean;
+    phase_id?: string | null;
+  },
 ): Promise<BoardNode> {
   const { data, error } = await client.from('board_nodes').insert(input).select('*').single();
   if (error) throw error;
@@ -128,13 +135,17 @@ export async function updateNode(client: Client, id: string, patch: NodePatch): 
   if (error) throw error;
 }
 
-/** One update per moved node — a drag rarely moves more than a handful. */
+/**
+ * One update per moved node — a drag rarely moves more than a handful. A move
+ * that carries `phase_id` also changes which phase the idea sits in; its x/y
+ * are then relative to that phase (or absolute when `phase_id` is null).
+ */
 export async function moveNodes(
   client: Client,
-  moves: { id: string; x: number; y: number }[],
+  moves: { id: string; x: number; y: number; phase_id?: string | null }[],
 ): Promise<void> {
   const results = await Promise.all(
-    moves.map(({ id, x, y }) => client.from('board_nodes').update({ x, y }).eq('id', id)),
+    moves.map(({ id, ...patch }) => client.from('board_nodes').update(patch).eq('id', id)),
   );
   const failed = results.find((r) => r.error);
   if (failed?.error) throw failed.error;

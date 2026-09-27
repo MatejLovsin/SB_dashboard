@@ -1,0 +1,79 @@
+/*
+ * A phase on the board canvas: a pool of light that groups ideas, not a box.
+ * Split from board.css, which holds the tokens (--accent-rgb, --goal-rgb) this
+ * file reads.
+ */
+
+/* ── Phases ────────────────────────────────────────────────────────────── */
+
+/* The pool lets the pointer through (React Flow sets pointer-events inline, so
+ * this needs !important); only its title and resize grips catch it. */
+.board-canvas .react-flow__node-phase {
+  pointer-events: none !important;
+}
+.phase-node {
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(var(--accent-rgb), 0.07),
+    rgba(var(--accent-rgb), 0.025) 60%,
+    transparent 100%
+  );
+  transition: background var(--dur-fast) var(--ease-out-quint);
+}
+.phase-node[data-selected='true'] {
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(var(--accent-rgb), 0.11),
+    rgba(var(--accent-rgb), 0.04) 60%,
+    transparent 100%
+  );
+}
+.phase-node[data-goal='achieved'] {
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(var(--goal-rgb), 0.14),
+    rgba(var(--goal-rgb), 0.05) 60%,
+    transparent 100%
+  );
+  box-shadow: inset 0 0 60px rgba(var(--goal-rgb), 0.08);
+}
+
+.phase-title {
+  display: inline-block;
+  pointer-events: all;
+  padding: 14px 18px 8px;
+  cursor: grab;
+}
+.react-flow__node.dragging .phase-title {
+  cursor: grabbing;
+}
+.phase-title .label {
+  font-size: 11px;
+  color: rgba(var(--accent-rgb), 0.85);
+}
+.phase-node[data-done='true'] .phase-title .label {
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.6);
+}
+.phase-node[data-goal='achieved'] .phase-title .label {
+  color: rgb(var(--goal-rgb));
+  text-shadow: 0 0 12px rgba(var(--goal-rgb), 0.7);
+}
+
+.board-canvas .react-flow__resize-control {
+  pointer-events: all;
+}
+.board-canvas .react-flow__resize-control.line.phase-resize-line {
+  border-color: rgba(var(--accent-rgb), 0.25);
+}
+.board-canvas .react-flow__resize-control.handle.phase-resize-handle {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6);
+}

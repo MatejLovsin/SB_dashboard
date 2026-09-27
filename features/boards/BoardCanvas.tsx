@@ -2,7 +2,8 @@
 
 import '@xyflow/react/dist/base.css';
 import './board.css';
-import { useCallback, useRef, useState } from 'react';
+import './phase.css';
+import { useMemo, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -11,198 +12,140 @@ import {
   Controls,
   ReactFlow,
   useReactFlow,
-  type Viewport,
+  useStoreApi,
 } from '@xyflow/react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { useCanEdit } from '@/lib/hooks/useCanEdit';
-import { createClient } from '@/lib/supabase/client';
-import { updateBoard, type BoardContents } from '@/lib/queries/boards';
-import { EdgePanel } from './EdgePanel';
+import type { BoardContents } from '@/lib/queries/boards';
+import { BoardContextProvider, type BoardGoals } from './boardContext';
+import type { BoardFlowNode, LightFlowEdge } from './boardFlow';
+import { CanvasHint, useViewportSaver } from './CanvasHint';
+import { CanvasOverlays, type Open } from './CanvasOverlays';
 import { IdeaNode } from './IdeaNode';
 import { LightEdge } from './LightEdge';
-import { NodePanel } from './NodePanel';
+import { PhaseNode } from './PhaseNode';
 import { useBoardGraph } from './useBoardGraph';
 
 // Module-level so React Flow never sees a new object and remounts every node.
-const nodeTypes = { idea: IdeaNode };
+const nodeTypes = { idea: IdeaNode, phase: PhaseNode };
 const edgeTypes = { light: LightEdge };
 
-type Graph = ReturnType<typeof useBoardGraph>;
-
-export function BoardCanvas({ contents }: { contents: BoardContents }) {
+export function BoardCanvas({ contents, goals }: { contents: BoardContents; goals: BoardGoals }) {
   const canEdit = useCanEdit();
   const graph = useBoardGraph(contents);
-  const { screenToFlowPosition } = useReactFlow();
-  const wrapper = useRef<HTMLDivElement>(null);
-  const [openNode, setOpenNode] = useState<string | null>(null);
-  const [openEdge, setOpenEdge] = useState<string | null>(null);
+  const [open, setOpen] = useState<Open>(null);
   const onMoveEnd = useViewportSaver(contents.board.id, canEdit);
+  const edges = useLitEdges(graph.nodes, graph.edges, goals);
   const { viewport } = contents.board;
+  const { resizePhase } = graph;
+  const context = useMemo(() => ({ goals, canEdit, resizePhase }), [goals, canEdit, resizePhase]);
 
-  async function addAt(clientX: number, clientY: number) {
-    const id = await graph.addNode(screenToFlowPosition({ x: clientX, y: clientY }));
-    if (id) setOpenNode(id);
+  const openNode = (node: BoardFlowNode) =>
+    setOpen({ kind: node.type === 'phase' ? 'phase' : 'idea', id: node.id });
+  const add = useCanvasAdd(graph, canEdit, setOpen);
+
+  return (
+    <BoardContextProvider value={context}>
+      <div className="space-y-2">
+        <CanvasHint
+          canEdit={canEdit}
+          error={graph.error}
+          onAddIdea={add.idea}
+          onAddPhase={add.phase}
+        />
+        <div
+          onDoubleClick={add.onDoubleClick}
+          className="board-canvas panel h-[calc(100dvh-15rem)] min-h-[420px] md:h-[calc(100dvh-13rem)]"
+        >
+          <ReactFlow
+            nodes={graph.nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={graph.onNodesChange}
+            onEdgesChange={graph.onEdgesChange}
+            onNodeDragStop={graph.onNodeDragStop}
+            onConnect={graph.onConnect}
+            onNodesDelete={graph.onNodesDelete}
+            onEdgesDelete={graph.onEdgesDelete}
+            onNodeDoubleClick={(_, node) => openNode(node)}
+            onNodeClick={canEdit ? undefined : (_, node) => openNode(node)}
+            onEdgeDoubleClick={canEdit ? (_, edge) => setOpen({ kind: 'edge', id: edge.id }) : undefined}
+            onMoveEnd={onMoveEnd}
+            connectionMode={ConnectionMode.Loose}
+            connectionLineType={ConnectionLineType.Straight}
+            nodesDraggable={canEdit}
+            nodesConnectable={canEdit}
+            edgesFocusable={canEdit}
+            deleteKeyCode={canEdit ? ['Backspace', 'Delete'] : null}
+            zoomOnDoubleClick={false}
+            defaultViewport={viewport ?? undefined}
+            fitView={!viewport}
+            fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
+            minZoom={0.2}
+            maxZoom={2}
+            colorMode="dark"
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={28} size={1} />
+            <Controls showInteractive={false} position="bottom-right" />
+          </ReactFlow>
+        </div>
+        <CanvasOverlays graph={graph} canEdit={canEdit} open={open} close={() => setOpen(null)} />
+      </div>
+    </BoardContextProvider>
+  );
+}
+
+/** Adding ideas and phases: by double-click on the canvas, or at its centre. */
+function useCanvasAdd(
+  graph: ReturnType<typeof useBoardGraph>,
+  canEdit: boolean,
+  setOpen: (open: Open) => void,
+) {
+  const { screenToFlowPosition, getViewport } = useReactFlow();
+  const store = useStoreApi();
+
+  async function ideaAt(position: { x: number; y: number }) {
+    const id = await graph.addNode(position);
+    if (id) setOpen({ kind: 'idea', id });
+  }
+
+  // The middle of what is on screen, in canvas coordinates.
+  function centre() {
+    const { width, height } = store.getState();
+    const { x, y, zoom } = getViewport();
+    return { x: (width / 2 - x) / zoom, y: (height / 2 - y) / zoom };
   }
 
   // React Flow has no pane double-click event; the wrapper catches it instead,
-  // and only when the click landed on empty canvas.
+  // and only when the click landed on empty canvas (a phase's pool counts —
+  // it lets clicks through, and the new idea joins that phase).
   function onDoubleClick(e: React.MouseEvent) {
     if (!canEdit || !(e.target instanceof Element)) return;
-    if (e.target.classList.contains('react-flow__pane')) void addAt(e.clientX, e.clientY);
+    if (e.target.classList.contains('react-flow__pane')) {
+      void ideaAt(screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+    }
   }
 
-  function addCentered() {
-    const rect = wrapper.current?.getBoundingClientRect();
-    if (rect) void addAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  async function phase() {
+    const id = await graph.addPhase(centre());
+    if (id) setOpen({ kind: 'phase', id });
   }
 
-  return (
-    <div className="space-y-2">
-      <CanvasHint canEdit={canEdit} error={graph.error} onAdd={addCentered} />
-      <div
-        ref={wrapper}
-        onDoubleClick={onDoubleClick}
-        className="board-canvas panel h-[calc(100dvh-15rem)] min-h-[420px] md:h-[calc(100dvh-13rem)]"
-      >
-        <ReactFlow
-          nodes={graph.nodes}
-          edges={graph.edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={graph.onNodesChange}
-          onEdgesChange={graph.onEdgesChange}
-          onNodeDragStop={graph.onNodeDragStop}
-          onConnect={graph.onConnect}
-          onNodesDelete={graph.onNodesDelete}
-          onEdgesDelete={graph.onEdgesDelete}
-          onNodeDoubleClick={(_, node) => setOpenNode(node.id)}
-          onNodeClick={canEdit ? undefined : (_, node) => setOpenNode(node.id)}
-          onEdgeDoubleClick={canEdit ? (_, edge) => setOpenEdge(edge.id) : undefined}
-          onMoveEnd={onMoveEnd}
-          connectionMode={ConnectionMode.Loose}
-          connectionLineType={ConnectionLineType.Straight}
-          nodesDraggable={canEdit}
-          nodesConnectable={canEdit}
-          edgesFocusable={canEdit}
-          deleteKeyCode={canEdit ? ['Backspace', 'Delete'] : null}
-          zoomOnDoubleClick={false}
-          defaultViewport={viewport ?? undefined}
-          fitView={!viewport}
-          fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
-          minZoom={0.2}
-          maxZoom={2}
-          colorMode="dark"
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={28} size={1} />
-          <Controls showInteractive={false} position="bottom-right" />
-        </ReactFlow>
-      </div>
-      <CanvasOverlays
-        graph={graph}
-        canEdit={canEdit}
-        openNode={openNode}
-        openEdge={openEdge}
-        closeNode={() => setOpenNode(null)}
-        closeEdge={() => setOpenEdge(null)}
-      />
-    </div>
-  );
+  return { onDoubleClick, idea: () => void ideaAt(centre()), phase: () => void phase() };
 }
 
-function CanvasHint({
-  canEdit,
-  error,
-  onAdd,
-}: {
-  canEdit: boolean;
-  error: string | null;
-  onAdd: () => void;
-}) {
-  return (
-    <div className="flex min-h-9 items-center justify-between gap-3">
-      <p className={`label text-[10px] ${error ? 'text-down' : 'text-muted'}`}>
-        {error ??
-          (canEdit
-            ? 'Double-click to add · drag from a light to connect · double-click a line to label it'
-            : 'Viewing · tap an idea to read it · edit on a computer')}
-      </p>
-      {canEdit ? (
-        <Button size="sm" variant="secondary" onClick={onAdd}>
-          <Plus className="h-4 w-4" />
-          Idea
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-interface OverlaysProps {
-  graph: Graph;
-  canEdit: boolean;
-  openNode: string | null;
-  openEdge: string | null;
-  closeNode: () => void;
-  closeEdge: () => void;
-}
-
-function CanvasOverlays({ graph, canEdit, openNode, openEdge, closeNode, closeEdge }: OverlaysProps) {
-  const node = openNode ? graph.nodes.find((n) => n.id === openNode) : undefined;
-  const edge = openEdge ? graph.edges.find((e) => e.id === openEdge) : undefined;
-
-  return (
-    <>
-      <FocusOverlay
-        open={node !== undefined}
-        onClose={closeNode}
-        size="reading"
-        title={canEdit ? 'Idea' : node?.data.title}
-      >
-        {node ? (
-          <NodePanel
-            key={node.id}
-            data={node.data}
-            canEdit={canEdit}
-            onSave={(patch) => graph.saveNode(node.id, patch)}
-            onDelete={() => {
-              void graph.removeNode(node.id);
-              closeNode();
-            }}
-            onClose={closeNode}
-          />
-        ) : null}
-      </FocusOverlay>
-
-      <FocusOverlay open={edge !== undefined} onClose={closeEdge} title="Line">
-        {edge ? (
-          <EdgePanel
-            key={edge.id}
-            label={edge.data?.label ?? null}
-            onSave={(label) => void graph.labelEdge(edge.id, label)}
-            onDelete={() => void graph.removeEdge(edge.id)}
-            onClose={closeEdge}
-          />
-        ) : null}
-      </FocusOverlay>
-    </>
-  );
-}
-
-/** Remembers where the camera was, so a board reopens where you left it. */
-function useViewportSaver(boardId: string, canEdit: boolean) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  return useCallback(
-    (_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
-      // The phone only looks; it should not move the desktop's camera.
-      if (!canEdit) return;
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        const { x, y, zoom } = viewport;
-        updateBoard(createClient(), boardId, { viewport: { x, y, zoom } }).catch(console.error);
-      }, 800);
-    },
-    [boardId, canEdit],
-  );
+/** A line touching an idea whose goal is achieved carries the goal's amber. */
+function useLitEdges(nodes: BoardFlowNode[], edges: LightFlowEdge[], goals: BoardGoals) {
+  return useMemo(() => {
+    const lit = new Set(
+      nodes
+        .filter((n) => n.data.goalId && goals.states[n.data.goalId]?.achieved)
+        .map((n) => n.id),
+    );
+    if (!lit.size) return edges;
+    return edges.map((e) =>
+      lit.has(e.source) || lit.has(e.target) ? { ...e, className: 'goal-lit' } : e,
+    );
+  }, [nodes, edges, goals]);
 }

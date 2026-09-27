@@ -23,6 +23,7 @@ import { CanvasOverlays, type Open } from './CanvasOverlays';
 import { IdeaNode } from './IdeaNode';
 import { LightEdge } from './LightEdge';
 import { PhaseNode } from './PhaseNode';
+import { UnsortedTray } from './UnsortedTray';
 import { useBoardGraph } from './useBoardGraph';
 
 // Module-level so React Flow never sees a new object and remounts every node.
@@ -33,6 +34,7 @@ export function BoardCanvas({ contents, goals }: { contents: BoardContents; goal
   const canEdit = useCanEdit();
   const graph = useBoardGraph(contents);
   const [open, setOpen] = useState<Open>(null);
+  const [trayOpen, setTrayOpen] = useState(false);
   const onMoveEnd = useViewportSaver(contents.board.id, canEdit);
   const edges = useLitEdges(graph.nodes, graph.edges, goals);
   const { viewport } = contents.board;
@@ -51,10 +53,13 @@ export function BoardCanvas({ contents, goals }: { contents: BoardContents; goal
           error={graph.error}
           onAddIdea={add.idea}
           onAddPhase={add.phase}
+          unsorted={graph.unsorted.length}
+          onToggleTray={() => setTrayOpen((o) => !o)}
+          onAddThought={() => setOpen({ kind: 'thought' })}
         />
         <div
           onDoubleClick={add.onDoubleClick}
-          className="board-canvas panel h-[calc(100dvh-15rem)] min-h-[420px] md:h-[calc(100dvh-13rem)]"
+          className="board-canvas panel relative h-[calc(100dvh-15rem)] min-h-[420px] md:h-[calc(100dvh-13rem)]"
         >
           <ReactFlow
             nodes={graph.nodes}
@@ -89,6 +94,14 @@ export function BoardCanvas({ contents, goals }: { contents: BoardContents; goal
             <Background variant={BackgroundVariant.Dots} gap={28} size={1} />
             <Controls showInteractive={false} position="bottom-right" />
           </ReactFlow>
+          {canEdit && trayOpen && graph.unsorted.length > 0 ? (
+            <UnsortedTray
+              items={graph.unsorted}
+              onPlace={(id) => void add.place(id)}
+              onDiscard={(id) => void graph.discardThought(id)}
+              onClose={() => setTrayOpen(false)}
+            />
+          ) : null}
         </div>
         <CanvasOverlays graph={graph} canEdit={canEdit} open={open} close={() => setOpen(null)} />
       </div>
@@ -132,7 +145,20 @@ function useCanvasAdd(
     if (id) setOpen({ kind: 'phase', id });
   }
 
-  return { onDoubleClick, idea: () => void ideaAt(centre()), phase: () => void phase() };
+  // Placed thoughts fan out a little from the centre so a run of them does not
+  // land in one pile.
+  async function place(id: string) {
+    const c = centre();
+    const step = graph.unsorted.length % 5;
+    await graph.placeThought(id, { x: c.x + step * 24, y: c.y + step * 36 });
+  }
+
+  return {
+    onDoubleClick,
+    idea: () => void ideaAt(centre()),
+    phase: () => void phase(),
+    place,
+  };
 }
 
 /** A line touching an idea whose goal is achieved carries the goal's amber. */

@@ -90,25 +90,31 @@ Not done (optional, ask first): the reverse "On board: X" link inside `GoalDetai
 
 ---
 
-## 3. Step 3 — phone quick-add + Unsorted tray
+## 3. Step 3 — phone quick-add + Unsorted tray: LIVE (approved + committed 2026-09-28)
 
-No migration: `board_nodes.unsorted` exists and `useBoardGraph` already filters unsorted
-rows off the canvas.
+`npm run check` + `npm run build` pass. Exercised in the browser on a throwaway board (since
+deleted), with the phone side driven through a 400 px same-origin iframe (the window would not
+resize): quick-add from `/boards` with the board picker, quick-add from inside a board, the
+row's `N unsorted` count, desktop tray listing both, **Place** ×2, reload → both persisted and
+the tray button gone.
 
-- **Phone "+ Thought"**, shown only when `!canEdit`:
-  - on `/boards/[id]`: in the hint bar. It adds to this board.
-  - on `/boards`: a button next to "New board" that opens a form with a board `<select>`
-    (most recent first) + a textarea. The first line becomes the title, the rest becomes `body`.
+| File | Role |
+|---|---|
+| `lib/utils/thought.ts` (+ test) | `splitThought`: first non-empty line → title (overlong lines cut at a word, carried into the note with `…`), rest → body |
+| `features/boards/ThoughtForm.tsx` | One textarea, optional board picker, stays open after adding and says `Added · <title>` (or that it failed) so several can go in a row |
+| `features/boards/useUnsorted.ts` | Tray state: `addThought`, `placeThought` (via `placeIdea`, so a thought placed over a phase joins it), `discardThought` |
+| `features/boards/UnsortedTray.tsx` | Floating list over the canvas, top-left; Place + two-tap delete per row |
+| `BoardsList.tsx` | Phone `+ Thought` (`QuickThought`) beside `+ Board`; rows show `N unsorted` in accent |
+| `CanvasHint.tsx` | Desktop `Unsorted · N` toggle (only when N > 0); phone `+ Thought` |
+| `lib/queries/boards.ts` | `BoardSummary.unsorted`; `nodes`/`done` now count **placed** ideas only; `createNode` takes `body` |
 
-  Insert with `createNode({ board_id, title, unsorted: true })` (extend its input type with
-  `body`). Keep it a single field and one tap. It must be fast with a thumb.
-- **Desktop tray**: when a board has unsorted nodes, the hint bar shows `Unsorted · N`.
-  Clicking it opens a small floating list (`.floating-panel`, per `DESIGN_GUIDE.md`). Each row
-  has **Place**, which calls `updateNode({ unsorted:false, x, y })` at the viewport centre and
-  adds it to flow state. Drag-from-tray (HTML5 drag → `onDrop` on the wrapper →
-  `screenToFlowPosition`) is a later nicety. Start with click-to-place.
-- `getBoard` already returns unsorted rows. Pass them separately from `useBoardGraph`.
-- `listBoards` counts include unsorted nodes. Decide whether the row shows "· N unsorted".
+Placement: at the centre of the view, fanned out a little per remaining item so a run of
+Places does not stack. Drag-from-tray is still a later nicety.
+
+### Step 3 eyeball (user)
+- [ ] On the real phone: `/boards` → `+ Thought`, keyboard comes up, add two in a row.
+- [ ] Place one while a phase is under the view's centre → it lands inside that phase.
+- [ ] Delete a thought from the tray (two taps on the bin).
 
 ---
 

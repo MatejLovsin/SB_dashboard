@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import type { Viewport } from '@xyflow/react';
-import { Plus } from 'lucide-react';
+import { Inbox, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
 import { updateBoard } from '@/lib/queries/boards';
@@ -12,10 +12,14 @@ interface CanvasHintProps {
   error: string | null;
   onAddIdea: () => void;
   onAddPhase: () => void;
+  unsorted: number;
+  onToggleTray: () => void;
+  onAddThought: () => void;
 }
 
 /** The line above the canvas: how to use it, or what just failed to save. */
-export function CanvasHint({ canEdit, error, onAddIdea, onAddPhase }: CanvasHintProps) {
+export function CanvasHint(props: CanvasHintProps) {
+  const { canEdit, error, onAddIdea, onAddPhase, unsorted, onToggleTray, onAddThought } = props;
   return (
     <div className="flex min-h-9 items-center justify-between gap-3">
       <p className={`label text-[10px] ${error ? 'text-down' : 'text-muted'}`}>
@@ -26,6 +30,12 @@ export function CanvasHint({ canEdit, error, onAddIdea, onAddPhase }: CanvasHint
       </p>
       {canEdit ? (
         <div className="flex flex-none gap-2">
+          {unsorted > 0 ? (
+            <Button size="sm" variant="ghost" onClick={onToggleTray}>
+              <Inbox className="h-4 w-4" />
+              <span className="nums">Unsorted · {unsorted}</span>
+            </Button>
+          ) : null}
           <Button size="sm" variant="ghost" onClick={onAddPhase}>
             <Plus className="h-4 w-4" />
             Phase
@@ -35,7 +45,12 @@ export function CanvasHint({ canEdit, error, onAddIdea, onAddPhase }: CanvasHint
             Idea
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <Button size="sm" variant="secondary" className="flex-none" onClick={onAddThought}>
+          <Plus className="h-4 w-4" />
+          Thought
+        </Button>
+      )}
     </div>
   );
 }

@@ -21,8 +21,11 @@ export const PAGE_LABEL: Record<BoardPage, string> = {
 /** A board as the list sees it: the row plus how far along its nodes are. */
 export interface BoardSummary {
   board: Board;
+  /** Ideas placed on the canvas. */
   nodes: number;
   done: number;
+  /** Thoughts added from the phone, waiting in the tray to be placed. */
+  unsorted: number;
 }
 
 export interface BoardContents {
@@ -54,19 +57,21 @@ export async function listBoards(
 
   const { data: nodes, error: nodeError } = await client
     .from('board_nodes')
-    .select('board_id, done')
+    .select('board_id, done, unsorted')
     .in('board_id', boards.map((b) => b.id));
   if (nodeError) throw nodeError;
 
-  const counts = new Map<string, { nodes: number; done: number }>();
+  const empty = { nodes: 0, done: 0, unsorted: 0 };
+  const counts = new Map<string, typeof empty>();
   for (const n of nodes ?? []) {
-    const c = counts.get(n.board_id) ?? { nodes: 0, done: 0 };
-    c.nodes += 1;
-    if (n.done) c.done += 1;
+    const c = counts.get(n.board_id) ?? { ...empty };
+    if (n.unsorted) c.unsorted += 1;
+    else c.nodes += 1;
+    if (n.done && !n.unsorted) c.done += 1;
     counts.set(n.board_id, c);
   }
 
-  return boards.map((board) => ({ board, ...(counts.get(board.id) ?? { nodes: 0, done: 0 }) }));
+  return boards.map((board) => ({ board, ...(counts.get(board.id) ?? empty) }));
 }
 
 export async function getBoard(client: Client, id: string): Promise<BoardContents | null> {
@@ -119,6 +124,7 @@ export async function createNode(
   input: {
     board_id: string;
     title: string;
+    body?: string | null;
     x?: number;
     y?: number;
     unsorted?: boolean;

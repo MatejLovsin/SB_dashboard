@@ -26,6 +26,7 @@ import {
   type LightFlowEdge,
 } from './boardFlow';
 import { usePhaseOps } from './usePhaseOps';
+import { useUnsorted } from './useUnsorted';
 
 export type Attempt = <T>(what: string, run: () => Promise<T>) => Promise<{ value: T } | null>;
 export type SetNodes = Dispatch<SetStateAction<BoardFlowNode[]>>;
@@ -51,6 +52,7 @@ export function useBoardGraph({ board, phases, nodes: rows, edges: edgeRows }: B
     onEdgesChange,
     ...useNodeOps(board.id, attempt, setNodes, setEdges),
     ...usePhaseOps(board.id, attempt, setNodes),
+    ...useUnsorted(board.id, rows.filter((r) => r.unsorted), attempt, setNodes),
     ...useEdgeOps(board.id, attempt, edges, setEdges),
   };
 }

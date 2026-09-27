@@ -12,8 +12,8 @@ that is the signal to archive, not to raise the cap.
 
 **Boards (whiteboard per project) — step 1 of 4 LIVE (2026-09-28).** `0021_boards` is applied
 and the canvas was eyeballed by the user (committed `2645376`, pushed). **Step 2 (phases + goal
-links + `/goals?goal=<id>`) is LIVE** (user approved 2026-09-28). Step 3 (phone quick-add +
-Unsorted tray) is in progress.
+links + `/goals?goal=<id>`) is LIVE** (user approved 2026-09-28). **Step 3 (phone quick-add +
+Unsorted tray) is LIVE** (approved 2026-09-28). Step 4 (images, migration `0022`) is in progress.
 
 ➡ **The full handoff is in `BOARDS_PLAN.md`:** agreed decisions, file map, the step-1 eyeball
 checklist, and detailed task lists for step 2 (phases + goal links + `/goals?goal=<id>`),

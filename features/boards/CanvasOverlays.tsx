@@ -5,9 +5,10 @@ import { isIdea, isPhase } from './boardFlow';
 import { EdgePanel } from './EdgePanel';
 import { NodePanel } from './NodePanel';
 import { PhasePanel } from './PhasePanel';
+import { ThoughtForm } from './ThoughtForm';
 import type { useBoardGraph } from './useBoardGraph';
 
-export type Open = { kind: 'idea' | 'phase' | 'edge'; id: string } | null;
+export type Open = { kind: 'idea' | 'phase' | 'edge'; id: string } | { kind: 'thought' } | null;
 
 interface OverlaysProps {
   graph: ReturnType<typeof useBoardGraph>;
@@ -16,13 +17,14 @@ interface OverlaysProps {
   close: () => void;
 }
 
-// The three things you can open on a board: an idea's note, a phase's
-// settings, and a line's label.
+// What you can open on a board: an idea's note, a phase's settings, a line's
+// label, and (on the phone) the quick-add for a thought.
 export function CanvasOverlays({ graph, canEdit, open, close }: OverlaysProps) {
-  const found = open && open.kind !== 'edge' ? graph.nodes.find((n) => n.id === open.id) : undefined;
+  const id = open && 'id' in open ? open.id : null;
+  const found = id ? graph.nodes.find((n) => n.id === id) : undefined;
   const idea = found && isIdea(found) && open?.kind === 'idea' ? found : undefined;
   const phase = found && isPhase(found) && open?.kind === 'phase' ? found : undefined;
-  const edge = open?.kind === 'edge' ? graph.edges.find((e) => e.id === open.id) : undefined;
+  const edge = open?.kind === 'edge' ? graph.edges.find((e) => e.id === id) : undefined;
 
   return (
     <>
@@ -65,6 +67,10 @@ export function CanvasOverlays({ graph, canEdit, open, close }: OverlaysProps) {
             onClose={close}
           />
         ) : null}
+      </FocusOverlay>
+
+      <FocusOverlay open={open?.kind === 'thought'} onClose={close} title="New thought">
+        <ThoughtForm onAdd={(_, thought) => graph.addThought(thought)} onCancel={close} />
       </FocusOverlay>
 
       <FocusOverlay open={edge !== undefined} onClose={close} title="Line">

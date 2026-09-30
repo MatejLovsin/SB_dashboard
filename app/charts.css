@@ -1,0 +1,18 @@
+/*
+ * Charts — a click does nothing.
+ *
+ * Recharts 3 makes every chart focusable (its keyboard `accessibilityLayer`),
+ * so a click or tap focused the SVG and drew the browser's focus ring around
+ * it, and mobile browsers flashed their tap highlight on top. A chart is read,
+ * not pressed: the only response to a pointer is the tooltip. A chart that
+ * links somewhere gets its feedback from the link wrapped around it.
+ */
+.recharts-wrapper,
+.recharts-surface {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.recharts-wrapper:focus,
+.recharts-wrapper *:focus {
+  outline: none;
+}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Archivo, Martian_Mono, Newsreader, Spline_Sans_Mono } from 'next/font/google';
 import './globals.css';
+import './charts.css';
 import { Providers } from './providers';
 
 // Type system — see the DESIGN LANGUAGE block in app/globals.css.

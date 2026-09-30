@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { inputClasses } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { TextArea } from '@/components/ui/TextArea';
 import { splitThought } from '@/lib/utils/thought';
 
@@ -42,17 +42,11 @@ export function ThoughtForm({ boards, onAdd, onCancel }: ThoughtFormProps) {
       {boards && boards.length > 1 ? (
         <label className="block">
           <span className="label mb-1.5 block text-[10px] text-muted">Board</span>
-          <select
+          <Select
             value={boardId}
-            onChange={(e) => setBoardId(e.target.value)}
-            className={inputClasses}
-          >
-            {boards.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            onChange={setBoardId}
+            options={boards.map((b) => ({ value: b.id, label: b.name }))}
+          />
         </label>
       ) : null}
       <TextArea

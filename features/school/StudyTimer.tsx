@@ -15,7 +15,7 @@ import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
-import { inputClasses } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Play, Pause, Square } from 'lucide-react';
 
 type Phase = 'idle' | 'running' | 'paused' | 'saving';
@@ -171,35 +171,27 @@ export function StudyTimer() {
 
       {phase === 'idle' && (
         <div className="space-y-3">
-          <select
-            className={inputClasses}
+          <Select
+            aria-label="Subject"
             value={subjectId}
-            onChange={(e) => {
-              setSubjectId(e.target.value);
+            onChange={(v) => {
+              setSubjectId(v);
               setExamId('');
             }}
-          >
-            <option value="">Select subject…</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Select subject…"
+            options={subjects.map((s) => ({ value: s.id, label: s.name }))}
+          />
 
           {subjectId && examsForSubject.length > 0 && (
-            <select
-              className={inputClasses}
+            <Select
+              aria-label="Exam"
               value={examId}
-              onChange={(e) => setExamId(e.target.value)}
-            >
-              <option value="">No specific exam</option>
-              {examsForSubject.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {shortExamLabel(e.exam_date, e.title)}
-                </option>
-              ))}
-            </select>
+              onChange={setExamId}
+              options={[
+                { value: '', label: 'No specific exam' },
+                ...examsForSubject.map((e) => ({ value: e.id, label: shortExamLabel(e.exam_date, e.title) })),
+              ]}
+            />
           )}
 
           <Button className="w-full" onClick={handleStart} disabled={!subjectId}>

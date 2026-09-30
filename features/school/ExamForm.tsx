@@ -3,7 +3,8 @@ import { useState } from 'react';
 import type { Subject } from '@/lib/db/types';
 import type { ExamInput, ExamWithSubject } from '@/lib/queries/school';
 import { descendantsOf } from '@/lib/utils/grades';
-import { Input, inputClasses } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 
 interface Props {
@@ -59,15 +60,12 @@ export function ExamForm({ subjects, exams = [], examId, initial, onSubmit, onCa
     <form onSubmit={submit} className="space-y-3">
       <div>
         <label htmlFor="exam-subject" className="mb-1.5 block text-sm font-medium">Subject</label>
-        <select
+        <Select
           id="exam-subject"
           value={subjectId}
-          onChange={(e) => setSubjectId(e.target.value)}
-          className={inputClasses}
-        >
-          <option value="" disabled>Select…</option>
-          {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+          onChange={setSubjectId}
+          options={subjects.map((s) => ({ value: s.id, label: s.name }))}
+        />
       </div>
 
       <Input
@@ -111,21 +109,18 @@ export function ExamForm({ subjects, exams = [], examId, initial, onSubmit, onCa
           <label htmlFor="exam-retake" className="mb-1.5 block text-sm font-medium">
             Retake of
           </label>
-          <select
+          <Select
             id="exam-retake"
             value={retakeValue}
-            onChange={(e) => setRetakeOf(e.target.value)}
-            className={inputClasses}
-          >
-            <option value="">Not a retake</option>
-            {retakeCandidates.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.exam_date}
-                {e.title ? ` · ${e.title}` : ''}
-                {e.grade != null ? ` · ${e.grade}%` : ''}
-              </option>
-            ))}
-          </select>
+            onChange={setRetakeOf}
+            options={[
+              { value: '', label: 'Not a retake' },
+              ...retakeCandidates.map((e) => ({
+                value: e.id,
+                label: `${e.exam_date}${e.title ? ` · ${e.title}` : ''}${e.grade != null ? ` · ${e.grade}%` : ''}`,
+              })),
+            ]}
+          />
           <p className="mt-1.5 text-xs text-muted">
             Only the best passing attempt in a chain counts towards your average.
           </p>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowUpRight, Trophy } from 'lucide-react';
-import { inputClasses } from '@/components/ui/Input';
+import { Select, type SelectOption } from '@/components/ui/Select';
 import { GOAL_SECTIONS } from '@/lib/queries/goals';
 import { useBoardContext, useGoalState, type GoalState } from './boardContext';
 
@@ -37,27 +37,20 @@ export function GoalLinkField({
   // A linked goal that is no longer active is not in the options; keep it
   // selectable so opening the form does not silently unlink it.
   const missing = value && !goals.options.some((o) => o.id === value);
+  const options: SelectOption[] = [
+    { value: '', label: 'None' },
+    ...(missing ? [{ value, label: linked?.title ?? 'Goal no longer active' }] : []),
+    ...GOAL_SECTIONS.flatMap((section) =>
+      goals.options
+        .filter((o) => o.section === section)
+        .map((o) => ({ value: o.id, label: o.title, group: SECTION_LABEL[section] })),
+    ),
+  ];
 
   return (
     <label className="block">
       <span className="label mb-1.5 block text-[10px] text-muted">Linked goal</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClasses}>
-        <option value="">None</option>
-        {missing ? <option value={value}>{linked?.title ?? 'Goal no longer active'}</option> : null}
-        {GOAL_SECTIONS.map((section) => {
-          const list = goals.options.filter((o) => o.section === section);
-          if (!list.length) return null;
-          return (
-            <optgroup key={section} label={SECTION_LABEL[section]}>
-              {list.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.title}
-                </option>
-              ))}
-            </optgroup>
-          );
-        })}
-      </select>
+      <Select value={value} onChange={onChange} options={options} />
     </label>
   );
 }

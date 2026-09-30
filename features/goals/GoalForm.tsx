@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, inputClasses } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { TextArea } from '@/components/ui/TextArea';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -292,18 +293,13 @@ export function GoalForm({ options, goal, milestones = [], onSaved, onCancel }: 
       {auto ? (
         <div className="space-y-4">
           <Field label="Tracks" hint={def?.hint}>
-            <select
+            <Select
+              aria-label="Tracks"
               value={kind}
-              onChange={(e) => pickKind(e.target.value as GoalMetricKind | '')}
-              className={inputClasses}
-            >
-              <option value="">Choose a metric…</option>
-              {kinds.map((m) => (
-                <option key={m.kind} value={m.kind}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => pickKind(v as GoalMetricKind | '')}
+              placeholder="Choose a metric…"
+              options={kinds.map((m) => ({ value: m.kind, label: m.label }))}
+            />
           </Field>
 
           {needs
@@ -321,18 +317,15 @@ export function GoalForm({ options, goal, milestones = [], onSaved, onCancel }: 
               const isOptional = def?.optional?.includes(arg) ?? false;
               return (
                 <Field key={arg} label={arg === 'label' ? 'Metric label' : arg}>
-                  <select
+                  <Select
+                    aria-label={arg}
                     value={args[key]}
-                    onChange={(e) => setArgs({ ...args, [key]: e.target.value })}
-                    className={inputClasses}
-                  >
-                    <option value="">{isOptional ? 'All' : 'Choose…'}</option>
-                    {list.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setArgs({ ...args, [key]: v })}
+                    options={[
+                      { value: '', label: isOptional ? 'All' : 'Choose…' },
+                      ...list.map((o) => ({ value: o.id, label: o.name })),
+                    ]}
+                  />
                   {list.length === 0 ? (
                     <p className="mt-1 text-xs text-muted">Nothing logged under this yet.</p>
                   ) : null}

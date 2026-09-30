@@ -15,6 +15,7 @@ import type { JournalWeek } from '@/lib/db/types';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FocusOverlay } from '@/components/ui/FocusOverlay';
 import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
@@ -184,17 +185,12 @@ export function JournalReview() {
           <p className="text-sm font-semibold">Add a past week</p>
           <div>
             <label className="mb-1.5 block text-sm font-medium">Week</label>
-            <select
+            <Select
+              aria-label="Week"
               value={pastWeekStart}
-              onChange={(e) => setPastWeekStart(e.target.value)}
-              className="w-full rounded-xl border border-border bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-            >
-              {candidateWeeks.map((ws) => (
-                <option key={ws} value={ws}>
-                  {weekRangeLabel(ws)}
-                </option>
-              ))}
-            </select>
+              onChange={setPastWeekStart}
+              options={candidateWeeks.map((ws) => ({ value: ws, label: weekRangeLabel(ws) }))}
+            />
           </div>
           <MarkdownEditor
             value={pastContent}

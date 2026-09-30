@@ -5,7 +5,7 @@ import type { CardInput } from '@/lib/queries/work';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Button } from '@/components/ui/Button';
-import { inputClasses } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 
 const STATUSES: { value: RoadmapStatus; label: string }[] = [
   { value: 'idea', label: 'Idea' },
@@ -64,31 +64,22 @@ export function CardForm({ initial, defaultStatus = 'idea', onSubmit, onCancel, 
       <div className="flex gap-3">
         <div className="flex-1">
           <label htmlFor="card-status" className="mb-1.5 block text-sm font-medium">Column</label>
-          <select
+          <Select
             id="card-status"
             value={status}
-            onChange={(e) => setStatus(e.target.value as RoadmapStatus)}
-            className={inputClasses}
-          >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+            onChange={(v) => setStatus(v as RoadmapStatus)}
+            options={STATUSES}
+          />
         </div>
 
         <div className="flex-1">
           <label htmlFor="card-priority" className="mb-1.5 block text-sm font-medium">Priority</label>
-          <select
+          <Select
             id="card-priority"
             value={priority ?? ''}
-            onChange={(e) => setPriority((e.target.value as Priority) || null)}
-            className={inputClasses}
-          >
-            <option value="">None</option>
-            {PRIORITIES.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
+            onChange={(v) => setPriority((v as Priority) || null)}
+            options={[{ value: '', label: 'None' }, ...PRIORITIES]}
+          />
         </div>
       </div>
 

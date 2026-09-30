@@ -19,6 +19,7 @@ import {
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
+import { Select } from '@/components/ui/Select';
 import { WeekProgramme } from './WeekProgramme';
 
 // null → heavy → light → null. Accessories carry no color; only the main lifts do.
@@ -209,10 +210,10 @@ export function ProgrammeEditor() {
                   {/* Plan link */}
                   <label className="flex items-center gap-2 text-xs text-muted">
                     <span className="w-24 shrink-0">Linked plan</span>
-                    <select
+                    <Select
                       value={day.plan_id ?? ''}
-                      onChange={(e) => {
-                        const planId = e.target.value || null;
+                      onChange={(v) => {
+                        const planId = v || null;
                         patchDay(day.weekday, { plan_id: planId });
                         // `planName` is derived, not persisted — keep the live
                         // preview above in sync without waiting for a refetch.
@@ -230,15 +231,12 @@ export function ProgrammeEditor() {
                             : prev,
                         );
                       }}
-                      className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-accent"
-                    >
-                      <option value="">No plan linked</option>
-                      {plans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: 'No plan linked' },
+                        ...plans.map((plan) => ({ value: plan.id, label: plan.name })),
+                      ]}
+                      className="min-w-0 flex-1 rounded-lg! px-2.5! py-1.5! text-foreground"
+                    />
                   </label>
 
                   {/* Exercise chips */}

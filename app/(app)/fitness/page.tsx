@@ -58,9 +58,12 @@ export default async function FitnessPage() {
     listResolvedGoals(supabase, { section: 'fitness', status: 'active' }).catch(() => []),
   ]);
 
-  const bestE1rm = pinnedLifts.length > 0
-    ? Math.max(...pinnedLifts.map((l) => l.current ?? 0))
-    : null;
+  // The pinned lift whose latest heavy-day est. 1RM is highest.
+  const topLift = pinnedLifts.reduce<(typeof pinnedLifts)[number] | null>(
+    (best, l) => (l.current !== null && l.current > (best?.current ?? 0) ? l : best),
+    null,
+  );
+  const bestE1rm = topLift?.current ?? null;
 
   return (
     <div className="space-y-4">
@@ -94,6 +97,7 @@ export default async function FitnessPage() {
           label="Best est. 1RM"
           value={bestE1rm !== null ? <CountUp value={bestE1rm} /> : '—'}
           unit={bestE1rm !== null ? 'kg' : ''}
+          caption={topLift?.exercise.name}
         />
       </div>
 

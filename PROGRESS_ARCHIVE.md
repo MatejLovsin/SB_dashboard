@@ -727,3 +727,26 @@ relevant to the open thread about `workout_streak_weeks` being unverified).
 
 ---
 
+
+---
+
+## Dropdowns, chart clicks, skipped sets — 2026-10-01
+
+**App dropdowns.** Every native `<select>` is gone. Their option list is drawn by the OS and ignored
+the dark theme (white panel, text visible only on hover). `components/ui/Select.tsx` is the one
+dropdown now: a `.floating-panel` list portalled to the body (so an overlay's scrolling body cannot
+clip it), with keyboard support and optional group headings. Escape is swallowed in the capture phase
+so it closes the list, not the `FocusOverlay` around it. Use it for any new picker.
+
+**Charts do nothing on click.** Recharts 3 makes each chart focusable (`accessibilityLayer`), so a
+click drew the browser focus ring and phones flashed a tap highlight. `app/charts.css` (imported in
+the root layout, since `globals.css` is over its line cap) removes both; the tooltip is untouched.
+A chart inside a link still navigates.
+
+**Skipped exercises stay off the graphs.** An exercise left on a plan with no set ticked used to
+come through `getExerciseHistory` and the exercise library as a 0 kg point. Both now load
+`completed = true` sets only. Ticked sets with no weight (bodyweight pull-ups) deliberately still
+count — they plot at 0 by the est-1RM formula, and the user wants them shown.
+
+The Fitness hub's "Best est. 1RM" tile now names its lift (the pinned lift with the highest latest
+heavy-day est. 1RM — not an all-time record).

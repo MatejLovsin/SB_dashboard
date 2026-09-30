@@ -153,7 +153,7 @@ export async function getExerciseHistory(
   const { data: sets, error: setsError } = await client
     .from('session_sets')
     .select('*')
-    .eq('exercise_id', exerciseId);
+    .eq('exercise_id', exerciseId).eq('completed', true); // unticked = skipped, not a 0 kg point
   if (setsError) throw setsError;
 
   const setRows = sets ?? [];

@@ -31,7 +31,10 @@ export async function getExerciseLibrary(client: Client): Promise<ExerciseLibrar
 
   const { data: sets, error: setsError } = await client
     .from('session_sets')
-    .select('exercise_id, session_id, reps, weight, completed');
+    .select('exercise_id, session_id, reps, weight, completed')
+    // An exercise left on a plan but never ticked off was skipped, not done:
+    // it must not count as a session, nor draw a 0 kg point on the trend.
+    .eq('completed', true);
   if (setsError) throw setsError;
 
   const { data: sessions, error: sessionsError } = await client

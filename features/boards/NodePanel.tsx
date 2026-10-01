@@ -5,7 +5,6 @@ import { Circle, CircleCheck } from 'lucide-react';
 import type { NodePatch } from '@/lib/queries/boards';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Markdown } from '@/components/ui/Markdown';
 import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
 import type { IdeaData } from './boardFlow';
 import { useImageUrl } from './boardContext';
@@ -15,43 +14,14 @@ import type { ImageChange } from './useIdeaImages';
 
 interface NodePanelProps {
   data: IdeaData;
-  canEdit: boolean;
   onSave: (patch: NodePatch, image: ImageChange) => Promise<boolean>;
   onDelete: () => void;
   onClose: () => void;
 }
 
-// The inside of an idea: its full markdown note. Desktop edits it; the phone
-// reads it.
-export function NodePanel({ data, canEdit, onSave, onDelete, onClose }: NodePanelProps) {
-  if (!canEdit) return <NodeReading data={data} />;
-  return <NodeEditing data={data} onSave={onSave} onDelete={onDelete} onClose={onClose} />;
-}
-
-function NodeReading({ data }: { data: IdeaData }) {
-  const imageUrl = useImageUrl(data.imagePath);
-  return (
-    <div className="space-y-4">
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className="w-full rounded-xl" />
-      ) : null}
-      <GoalLinkStatus goalId={data.goalId} />
-      {data.done ? (
-        <span className="label flex items-center gap-1.5 text-[11px] text-accent">
-          <CircleCheck className="h-3.5 w-3.5" /> Done
-        </span>
-      ) : null}
-      {data.body ? (
-        <Markdown>{data.body}</Markdown>
-      ) : (
-        <p className="text-sm text-muted">No notes on this idea yet.</p>
-      )}
-    </div>
-  );
-}
-
-function NodeEditing({ data, onSave, onDelete, onClose }: Omit<NodePanelProps, 'canEdit'>) {
+// The idea's form: its title, full markdown note, image, done and goal link.
+// Reading it is NodeReading's job.
+export function NodePanel({ data, onSave, onDelete, onClose }: NodePanelProps) {
   const [title, setTitle] = useState(data.title);
   const [body, setBody] = useState(data.body ?? '');
   const [done, setDone] = useState(data.done);

@@ -255,3 +255,14 @@
 .board-canvas .react-flow__controls-button svg {
   fill: currentColor;
 }
+
+/* ── Image plate (idea reading view) ───────────────────────────────────── */
+
+/* A light table under the image: lit from above, dark at the edges, so a
+   letterboxed screenshot sits on something rather than in a hole. */
+.idea-plate {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255, 255, 255, 0.05), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+}

@@ -31,13 +31,7 @@ local (see Open threads → Boards follow-ups).
 phone quick-add, images); `0021` and `0022` are applied. The summary and gotchas are in
 `PROGRESS_ARCHIVE.md`. Small follow-ups are under Open threads → Boards.
 
-**Heavy / light emphasis on est-1RM trends — SHIPPED (2026-09-22).** Migrations `0019` and `0020`
-are both applied and the split is live. Light days are their own series; heavy and unclassified
-days share the main line. `lib/utils/emphasis.ts` is the one rule every screen reads it through,
-which also corrected `isStalled`, the hub sparkline delta and the `exercise_*` goal metrics.
-`PROGRESS_ARCHIVE.md` has where the two columns live and why.
-
-**Still to eyeball:** the two lines on `/fitness/exercise/[id]` at phone width — that the legend
+**Heavy / light emphasis — SHIPPED (2026-09-22);** see `PROGRESS_ARCHIVE.md`. **Still to eyeball:** the two lines on `/fitness/exercise/[id]` at phone width — that the legend
 does not crowd and that the dimmer light line still reads. Worth a second look at the stalled list
 on `/fitness` too, now that light days no longer count as failed heavy ones.
 
@@ -65,6 +59,15 @@ manual *numeric* goal can only move its bar by ticking milestones.
   school and work ones deserve a sanity check the first time a goal binds to them.
 
 ### Boards follow-ups (small)
+- **Idea / phase reading view (2026-10-01, uncommitted, not yet seen in a browser).** A click
+  now opens `NodeReading.tsx`. An idea shows its note, image, and what it's tied to (goal,
+  phase, linked ideas). A phase shows its goal, done/total progress and its ideas with ticks.
+  Mark-as-done works there, on the phone too. On desktop a double-click or Edit opens the
+  form, and Save/Cancel go back to reading. To check: the 220 ms click delay feels fine, and
+  the backdrop doesn't eat a double-click.
+  Since then: an idea with an image opens wide (`FocusOverlay size="plate"`), with the image
+  whole beside the notes (`IdeaPlate`). A tap opens `components/ui/ImageLightbox` (wheel/pinch/tap
+  zoom, drag pan, `lib/hooks/useZoomPan`). Unchecked: pinch on a real phone.
 - **Board load speed-up (2026-10-01, uncommitted, not yet seen in a browser).** `/boards/[id]` now
   resolves only the goals the board links to (`lib/queries/boardGoals.ts`), streams them in
   (`useBoardGoals`) instead of holding the canvas back, signs images right after the board

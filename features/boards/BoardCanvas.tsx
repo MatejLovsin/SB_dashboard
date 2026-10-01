@@ -3,7 +3,7 @@
 import '@xyflow/react/dist/base.css';
 import './board.css';
 import './phase.css';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -52,8 +52,7 @@ export function BoardCanvas({ contents, goals: pendingGoals, images }: BoardCanv
     [goals, imageUrls, canEdit, resizePhase],
   );
 
-  const openNode = (node: BoardFlowNode) =>
-    setOpen({ kind: node.type === 'phase' ? 'phase' : 'idea', id: node.id });
+  const clicks = useNodeClicks(canEdit, setOpen);
   const add = useCanvasAdd(graph, canEdit, setOpen);
 
   return (
@@ -83,8 +82,8 @@ export function BoardCanvas({ contents, goals: pendingGoals, images }: BoardCanv
             onConnect={graph.onConnect}
             onNodesDelete={graph.onNodesDelete}
             onEdgesDelete={graph.onEdgesDelete}
-            onNodeDoubleClick={(_, node) => openNode(node)}
-            onNodeClick={canEdit ? undefined : (_, node) => openNode(node)}
+            onNodeClick={clicks.onClick}
+            onNodeDoubleClick={clicks.onDoubleClick}
             onEdgeDoubleClick={canEdit ? (_, edge) => setOpen({ kind: 'edge', id: edge.id }) : undefined}
             onMoveEnd={onMoveEnd}
             connectionMode={ConnectionMode.Loose}
@@ -114,10 +113,44 @@ export function BoardCanvas({ contents, goals: pendingGoals, images }: BoardCanv
             />
           ) : null}
         </div>
-        <CanvasOverlays graph={graph} canEdit={canEdit} open={open} close={() => setOpen(null)} />
+        <CanvasOverlays graph={graph} canEdit={canEdit} open={open} setOpen={setOpen} />
       </div>
     </BoardContextProvider>
   );
+}
+
+// How long a click waits to see whether it is the first half of a double-click.
+const DOUBLE_CLICK_MS = 220;
+
+/**
+ * A click opens an idea or phase to read; on desktop a double-click opens its
+ * form. The click waits a beat first, or the overlay it opens would catch the
+ * second click of a double-click and close again.
+ */
+function useNodeClicks(canEdit: boolean, setOpen: (open: Open) => void) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => clearTimer(timer), []);
+  const target = (node: BoardFlowNode) => ({
+    kind: node.type === 'phase' ? ('phase' as const) : ('idea' as const),
+    id: node.id,
+  });
+
+  return {
+    onClick: (_: React.MouseEvent, node: BoardFlowNode) => {
+      if (!canEdit) return setOpen(target(node));
+      clearTimer(timer);
+      timer.current = setTimeout(() => setOpen(target(node)), DOUBLE_CLICK_MS);
+    },
+    onDoubleClick: (_: React.MouseEvent, node: BoardFlowNode) => {
+      clearTimer(timer);
+      setOpen({ ...target(node), edit: canEdit });
+    },
+  };
+}
+
+function clearTimer(timer: { current: ReturnType<typeof setTimeout> | null }) {
+  if (timer.current) clearTimeout(timer.current);
+  timer.current = null;
 }
 
 /** Adding ideas and phases: by double-click on the canvas, or at its centre. */
@@ -131,7 +164,7 @@ function useCanvasAdd(
 
   async function ideaAt(position: { x: number; y: number }) {
     const id = await graph.addNode(position);
-    if (id) setOpen({ kind: 'idea', id });
+    if (id) setOpen({ kind: 'idea', id, edit: true });
   }
 
   // The middle of what is on screen, in canvas coordinates.
@@ -153,7 +186,7 @@ function useCanvasAdd(
 
   async function phase() {
     const id = await graph.addPhase(centre());
-    if (id) setOpen({ kind: 'phase', id });
+    if (id) setOpen({ kind: 'phase', id, edit: true });
   }
 
   // Placed thoughts fan out a little from the centre so a run of them does not

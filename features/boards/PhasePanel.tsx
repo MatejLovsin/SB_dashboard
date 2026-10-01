@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { CircleCheck } from 'lucide-react';
 import type { PhasePatch } from '@/lib/queries/boardPhases';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,34 +10,14 @@ import { DoneToggle } from './NodePanel';
 
 interface PhasePanelProps {
   data: PhaseData;
-  canEdit: boolean;
   onSave: (patch: PhasePatch) => Promise<boolean>;
   onDelete: () => void;
   onClose: () => void;
 }
 
 // A phase's settings: its name, done, and the goal it answers to. Deleting it
-// keeps its ideas on the canvas.
-export function PhasePanel({ data, canEdit, onSave, onDelete, onClose }: PhasePanelProps) {
-  if (!canEdit) {
-    return (
-      <div className="space-y-4">
-        <GoalLinkStatus goalId={data.goalId} />
-        {data.done ? (
-          <span className="label flex items-center gap-1.5 text-[11px] text-accent">
-            <CircleCheck className="h-3.5 w-3.5" /> Done
-          </span>
-        ) : null}
-        {!data.goalId && !data.done ? (
-          <p className="text-sm text-muted">A phase of this board.</p>
-        ) : null}
-      </div>
-    );
-  }
-  return <PhaseEditing data={data} onSave={onSave} onDelete={onDelete} onClose={onClose} />;
-}
-
-function PhaseEditing({ data, onSave, onDelete, onClose }: Omit<PhasePanelProps, 'canEdit'>) {
+// keeps its ideas on the canvas. Reading it is NodeReading's job.
+export function PhasePanel({ data, onSave, onDelete, onClose }: PhasePanelProps) {
   const [title, setTitle] = useState(data.title);
   const [done, setDone] = useState(data.done);
   const [goalId, setGoalId] = useState(data.goalId ?? '');

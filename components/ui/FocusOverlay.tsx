@@ -19,8 +19,9 @@ interface FocusOverlayProps {
    * `default` — the compact panel used for detail read-outs and short forms.
    * `reading` — the long-form surface: a wider panel, more air, and room for the
    * full reading measure. Use it wherever <Markdown> renders an entry.
+   * `plate` — `reading` gone wide, for an entry laid out beside an image.
    */
-  size?: 'default' | 'reading';
+  size?: 'default' | 'reading' | 'plate';
 }
 
 const sizeClasses = {
@@ -30,6 +31,12 @@ const sizeClasses = {
     pad: 'px-5 sm:px-9',
     head: 'pt-6 sm:pt-8',
     body: 'pb-9 pt-5',
+  },
+  plate: {
+    panel: 'max-w-[1100px] max-h-[92vh]',
+    pad: 'px-5 sm:px-8',
+    head: 'pt-6 sm:pt-7',
+    body: 'pb-8 pt-5',
   },
 } as const;
 

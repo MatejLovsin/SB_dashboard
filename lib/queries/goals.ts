@@ -344,16 +344,17 @@ async function perSessionFromSets(
   exerciseId: string,
   reduce: (sets: Array<{ reps: number | null; weight: number | null }>) => number | null,
 ): Promise<Observation[]> {
-  const sets = await memo(cache, `sets:${exerciseId}`, async () => {
-    const { data, error } = await client
-      .from('session_sets')
-      .select('session_id, reps, weight, completed')
-      .eq('exercise_id', exerciseId);
-    if (error) throw error;
-    return data ?? [];
-  });
-
-  const sessions = await liftSessions(client, cache);
+  const [sets, sessions] = await Promise.all([
+    memo(cache, `sets:${exerciseId}`, async () => {
+      const { data, error } = await client
+        .from('session_sets')
+        .select('session_id, reps, weight, completed')
+        .eq('exercise_id', exerciseId);
+      if (error) throw error;
+      return data ?? [];
+    }),
+    liftSessions(client, cache),
+  ]);
   const grouped = new Map<string, Array<{ reps: number | null; weight: number | null }>>();
   for (const s of sets) {
     if (!s.completed) continue;
@@ -491,8 +492,10 @@ export async function resolveMetric(
     case 'cardio_longest_distance':
     case 'cardio_total_duration':
     case 'cardio_session_count': {
-      const rows = await cardioEntries(client, cache, metric.activity);
-      const dates = await cardioDates(client, cache);
+      const [rows, dates] = await Promise.all([
+        cardioEntries(client, cache, metric.activity),
+        cardioDates(client, cache),
+      ]);
       const series = rows
         .map((r) => {
           const at = dates.get(r.session_id);
@@ -759,25 +762,21 @@ export interface GoalWithMilestones {
 
 export async function listGoals(
   client: Client,
-  opts: { section?: GoalSection | null; status?: GoalStatus | null } = {},
+  opts: { section?: GoalSection | null; status?: GoalStatus | GoalStatus[] | null } = {},
 ): Promise<GoalWithMilestones[]> {
   let query = client.from('goals').select('*');
   if (opts.section) query = query.eq('section', opts.section);
-  if (opts.status) query = query.eq('status', opts.status);
+  if (Array.isArray(opts.status)) query = query.in('status', opts.status);
+  else if (opts.status) query = query.eq('status', opts.status);
 
-  const { data: goals, error } = await query
-    .order('pinned', { ascending: false })
-    .order('position')
-    .order('created_at');
+  // Every milestone comes back alongside the goals: a small list beats a second round trip.
+  const [{ data: goals, error }, { data: milestones, error: msError }] = await Promise.all([
+    query.order('pinned', { ascending: false }).order('position').order('created_at'),
+    client.from('goal_milestones').select('*').order('position'),
+  ]);
   if (error) throw error;
-  if (!goals?.length) return [];
-
-  const { data: milestones, error: msError } = await client
-    .from('goal_milestones')
-    .select('*')
-    .in('goal_id', goals.map((g) => g.id))
-    .order('position');
   if (msError) throw msError;
+  if (!goals?.length) return [];
 
   const byGoal = new Map<string, GoalMilestone[]>();
   for (const m of milestones ?? []) {
@@ -796,7 +795,7 @@ export async function listGoals(
  */
 export async function listResolvedGoals(
   client: Client,
-  opts: { section?: GoalSection | null; status?: GoalStatus | null } = { status: 'active' },
+  opts: { section?: GoalSection | null; status?: GoalStatus | GoalStatus[] | null } = { status: 'active' },
 ): Promise<ResolvedGoal[]> {
   const rows = await listGoals(client, opts);
   const cache: Memo = new Map();
@@ -826,7 +825,7 @@ export async function getResolvedGoal(client: Client, id: string): Promise<Resol
 }
 
 /** Auto goals read the app; manual goals read their own check-ins. */
-async function seriesForGoal(client: Client, goal: Goal, cache: Memo): Promise<MetricSeries> {
+export async function seriesForGoal(client: Client, goal: Goal, cache: Memo): Promise<MetricSeries> {
   if (goal.source === 'auto' && goal.metric) {
     try {
       return await resolveMetric(client, goal.metric as unknown as GoalMetric, cache);
@@ -837,11 +836,10 @@ async function seriesForGoal(client: Client, goal: Goal, cache: Memo): Promise<M
     }
   }
 
-  const checkins = await memo(cache, `checkins:${goal.id}`, async () => {
+  const checkins = await memo(cache, 'checkins', async () => { // one query, shared by every manual goal
     const { data, error } = await client
       .from('goal_checkins')
-      .select('value, recorded_at')
-      .eq('goal_id', goal.id)
+      .select('goal_id, value, recorded_at')
       .order('recorded_at');
     if (error) throw error;
     return data ?? [];
@@ -849,7 +847,9 @@ async function seriesForGoal(client: Client, goal: Goal, cache: Memo): Promise<M
 
   return {
     mode: 'peak',
-    series: checkins.map((c) => ({ at: c.recorded_at, value: c.value })),
+    series: checkins
+      .filter((c) => c.goal_id === goal.id)
+      .map((c) => ({ at: c.recorded_at, value: c.value })),
   };
 }
 

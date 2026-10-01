@@ -16,11 +16,14 @@ export default async function GoalsPage({ searchParams }: Props) {
   const { goal } = await searchParams;
   const supabase = await createClient();
 
-  const [active, achieved, options] = await Promise.all([
-    listResolvedGoals(supabase, { status: 'active' }).catch(() => []),
-    listResolvedGoals(supabase, { status: 'achieved' }).catch(() => []),
+  // One pass for both lists, so they share a cache: two goals reading the same
+  // exercise or table fetch it once, whichever list each sits in.
+  const [resolved, options] = await Promise.all([
+    listResolvedGoals(supabase, { status: ['active', 'achieved'] }).catch(() => []),
     listMetricOptions(supabase),
   ]);
+  const active = resolved.filter((r) => r.goal.status === 'active');
+  const achieved = resolved.filter((r) => r.goal.status === 'achieved');
 
   return (
     <div className="space-y-4">

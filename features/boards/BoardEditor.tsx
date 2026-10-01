@@ -20,7 +20,7 @@ import { BoardForm } from './BoardForm';
 
 interface BoardEditorProps {
   contents: BoardContents;
-  goals: BoardGoals;
+  goals: Promise<BoardGoals>;
   images: Record<string, string>;
 }
 

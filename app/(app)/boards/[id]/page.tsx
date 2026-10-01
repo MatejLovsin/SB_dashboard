@@ -2,46 +2,35 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getBoard } from '@/lib/queries/boards';
 import { signImages } from '@/lib/queries/boardImages';
-import { listResolvedGoals } from '@/lib/queries/goals';
+import { listGoalOptions } from '@/lib/queries/boardGoals';
 import { BoardEditor } from '@/features/boards/BoardEditor';
-import type { BoardGoals } from '@/features/boards/boardContext';
+import { loadBoardGoals, NO_GOALS } from '@/features/boards/boardGoals';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
+const logged = <T,>(fallback: T) => (e: unknown): T => {
+  console.error(e);
+  return fallback;
+};
+
 export default async function BoardPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
-  const [contents, resolved] = await Promise.all([
-    getBoard(supabase, id),
-    // `{}` is every status: a link to an achieved goal must still light up.
-    // Goals are resolved here, on the server, for the same reason /goals does.
-    listResolvedGoals(supabase, {}).catch((e: unknown) => {
-      console.error(e);
-      return [];
-    }),
-  ]);
+  // The picker's list needs nothing from the board, so it starts first.
+  const options = listGoalOptions(supabase).catch(logged([]));
+  const contents = await getBoard(supabase, id);
   if (!contents) notFound();
 
-  const goals: BoardGoals = {
-    states: Object.fromEntries(
-      resolved.map((r) => [
-        r.goal.id,
-        { title: r.goal.title, percent: r.percent, achieved: r.achieved },
-      ]),
-    ),
-    options: resolved
-      .filter((r) => r.goal.status === 'active')
-      .map((r) => ({ id: r.goal.id, title: r.goal.title, section: r.goal.section })),
-  };
+  // Not awaited: the canvas paints without goal progress and the glow follows
+  // on the stream. Only goals this board links to are resolved — any status,
+  // since a link to an achieved goal must still light up.
+  const goals = loadBoardGoals(supabase, contents, options).catch(logged(NO_GOALS));
 
   // The bucket is private: sign every image on the board in one call.
   const paths = contents.nodes.flatMap((n) => (n.image_path ? [n.image_path] : []));
-  const images = await signImages(supabase, paths).catch((e: unknown) => {
-    console.error(e);
-    return {};
-  });
+  const images = await signImages(supabase, paths).catch(logged<Record<string, string>>({}));
 
   return <BoardEditor contents={contents} goals={goals} images={images} />;
 }

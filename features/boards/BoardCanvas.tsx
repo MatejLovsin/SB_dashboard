@@ -24,6 +24,7 @@ import { IdeaNode } from './IdeaNode';
 import { LightEdge } from './LightEdge';
 import { PhaseNode } from './PhaseNode';
 import { UnsortedTray } from './UnsortedTray';
+import { useBoardGoals } from './useBoardGoals';
 import { useBoardGraph } from './useBoardGraph';
 
 // Module-level so React Flow never sees a new object and remounts every node.
@@ -32,13 +33,14 @@ const edgeTypes = { light: LightEdge };
 
 interface BoardCanvasProps {
   contents: BoardContents;
-  goals: BoardGoals;
+  goals: Promise<BoardGoals>;
   images: Record<string, string>;
 }
 
-export function BoardCanvas({ contents, goals, images }: BoardCanvasProps) {
+export function BoardCanvas({ contents, goals: pendingGoals, images }: BoardCanvasProps) {
   const canEdit = useCanEdit();
   const graph = useBoardGraph(contents, images);
+  const goals = useBoardGoals(pendingGoals, graph.nodes);
   const [open, setOpen] = useState<Open>(null);
   const [trayOpen, setTrayOpen] = useState(false);
   const onMoveEnd = useViewportSaver(contents.board.id, canEdit);

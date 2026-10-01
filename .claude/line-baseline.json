@@ -1,7 +1,7 @@
 {
   "comment": "Files grandfathered above the 300-line cap. Each may shrink, never grow. Lower with: npm run lines:ratchet",
   "files": {
-    "lib/queries/goals.ts": 1100,
+    "lib/queries/goals.ts": 1047,
     "app/globals.css": 638,
     "features/work/KanbanBoard.tsx": 573,
     "lib/queries/school.ts": 511,

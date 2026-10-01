@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { listMetricOptions, listResolvedGoals } from '@/lib/queries/goals';
+import { listResolvedGoals } from '@/lib/queries/goals';
+import { listMetricOptions } from '@/lib/queries/goalMetricOptions';
 import { GoalsBoard } from '@/features/goals/GoalsBoard';
 import { Suspense } from 'react';
 import { BoardsFooter } from '@/features/boards/BoardsFooter';

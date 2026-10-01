@@ -18,8 +18,8 @@ import {
   updateGoal,
   type GoalMetric,
   type GoalMetricKind,
-  type MetricOptions,
 } from '@/lib/queries/goals';
+import type { MetricOptions } from '@/lib/queries/goalMetricOptions';
 import type { Goal, GoalDirection, GoalSection } from '@/lib/db/types';
 
 interface GoalFormProps {

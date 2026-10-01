@@ -12,17 +12,20 @@ that is the signal to archive, not to raise the cap.
 
 **Page-load speed: continue here next session.** Done on 2026-10-01: the board loads only
 the goals it links to, goal progress needs 2 waits in a row instead of 4, and the login check is
-local (see Open threads → Boards follow-ups). Two steps were agreed and are still to do:
-1. **Section pages stop waiting for goals.** `/fitness`, `/school` and `/work` await
-   `listResolvedGoals` in their `Promise.all`, so the whole page waits for the goal strip. Load the
-   `GoalStrip` separately (an async server component inside `<Suspense>`). The catch: the strip
-   sits above the KPI tiles, so the fallback must hold its space, or the tiles jump down when it
-   arrives.
-2. **Load less history as it grows.** The resolvers in `lib/queries/goals.ts` read all
-   `workout_sessions`, all `session_sets` for an exercise, all cardio, exams and so on, with no
-   limit, so each load grows over time. Supabase also caps a query at 1,000 rows by default,
-   which would silently cut off long histories. Look at selecting less, using a DB view or RPC,
-   or paging past 1,000.
+local (see Open threads → Boards follow-ups).
+1. **Section pages stop waiting for goals — DONE 2026-10-01, uncommitted, not yet seen in a
+   browser.** `GoalStripLoader` streams the strip in `<Suspense>`; the fallback `GoalStripGhost`
+   draws last visit's goals dimmed from the snapshot (same count, so the tiles don't jump), and
+   live bars ease from that width via `GoalBar drawFrom`. Check: navigate to a hub and the ghost
+   lights up in place; a hard refresh still draws from zero with no hydration warning; a
+   section with no goals shows nothing. Known gap: first visit / cleared storage still pushes
+   the tiles down once.
+2. **Goal history past 1,000 rows — DONE 2026-10-01, uncommitted.** Every goal resolver query
+   now goes through `lib/queries/fetchAll.ts`, which pages past Supabase's silent 1,000-row cap
+   (keep its `PAGE` equal to the project's API max rows). Skipped sets are filtered in the DB. No
+   view/RPC on purpose: the light-day and 1RM rules must stay in TS. The metric picker moved to
+   `lib/queries/goalMetricOptions.ts`. Not yet done: other query files (analytics, history pages)
+   still read without paging. Check that the `/goals` numbers are unchanged.
 
 **Boards — SHIPPED (2026-09-28).** All four steps are live (canvas, phases + goal links,
 phone quick-add, images); `0021` and `0022` are applied. The summary and gotchas are in

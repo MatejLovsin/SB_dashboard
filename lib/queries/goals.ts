@@ -33,6 +33,7 @@ import { emphasisFor, isLight } from '@/lib/utils/emphasis';
 import { byDate, runningAverage, streakSeries, type Observation } from '@/lib/utils/goalSeries';
 import { countedExams, resolveAttempts } from '@/lib/utils/grades';
 import type { Client } from './fitness';
+import { fetchAll } from './fetchAll';
 
 export const goalKeys = {
   all: ['goals'] as const,
@@ -323,17 +324,19 @@ type LiftSession = { performed_at: string; emphasis: SessionEmphasis };
 
 async function liftSessions(client: Client, cache: Memo): Promise<Map<string, LiftSession>> {
   return memo(cache, 'workout_sessions', async () => {
-    const { data, error } = await client.from('workout_sessions').select('id, performed_at, emphasis');
-    if (error) throw error;
-    return new Map((data ?? []).map((s) => [s.id, { performed_at: s.performed_at, emphasis: s.emphasis ?? {} }]));
+    const data = await fetchAll((from, to) =>
+      client.from('workout_sessions').select('id, performed_at, emphasis').order('id').range(from, to),
+    );
+    return new Map(data.map((s) => [s.id, { performed_at: s.performed_at, emphasis: s.emphasis ?? {} }]));
   });
 }
 
 async function cardioDates(client: Client, cache: Memo): Promise<Map<string, string>> {
   return memo(cache, 'cardio_sessions', async () => {
-    const { data, error } = await client.from('cardio_sessions').select('id, performed_at');
-    if (error) throw error;
-    return new Map((data ?? []).map((s) => [s.id, s.performed_at]));
+    const data = await fetchAll((from, to) =>
+      client.from('cardio_sessions').select('id, performed_at').order('id').range(from, to),
+    );
+    return new Map(data.map((s) => [s.id, s.performed_at]));
   });
 }
 
@@ -345,19 +348,22 @@ async function perSessionFromSets(
   reduce: (sets: Array<{ reps: number | null; weight: number | null }>) => number | null,
 ): Promise<Observation[]> {
   const [sets, sessions] = await Promise.all([
-    memo(cache, `sets:${exerciseId}`, async () => {
-      const { data, error } = await client
-        .from('session_sets')
-        .select('session_id, reps, weight, completed')
-        .eq('exercise_id', exerciseId);
-      if (error) throw error;
-      return data ?? [];
-    }),
+    // Skipped sets never count, so they stay in the database.
+    memo(cache, `sets:${exerciseId}`, () =>
+      fetchAll((from, to) =>
+        client
+          .from('session_sets')
+          .select('session_id, reps, weight')
+          .eq('exercise_id', exerciseId)
+          .eq('completed', true)
+          .order('id')
+          .range(from, to),
+      ),
+    ),
     liftSessions(client, cache),
   ]);
   const grouped = new Map<string, Array<{ reps: number | null; weight: number | null }>>();
   for (const s of sets) {
-    if (!s.completed) continue;
     const list = grouped.get(s.session_id);
     if (list) list.push(s);
     else grouped.set(s.session_id, [s]);
@@ -375,13 +381,15 @@ async function perSessionFromSets(
 }
 
 async function cardioEntries(client: Client, cache: Memo, activity?: string | null) {
-  const rows = await memo(cache, 'cardio_entries', async () => {
-    const { data, error } = await client
-      .from('cardio_entries')
-      .select('session_id, activity, duration_minutes, distance_km');
-    if (error) throw error;
-    return data ?? [];
-  });
+  const rows = await memo(cache, 'cardio_entries', () =>
+    fetchAll((from, to) =>
+      client
+        .from('cardio_entries')
+        .select('session_id, activity, duration_minutes, distance_km')
+        .order('id')
+        .range(from, to),
+    ),
+  );
   if (!activity) return rows;
   const want = activity.toLowerCase();
   return rows.filter((r) => r.activity.toLowerCase() === want);
@@ -389,13 +397,11 @@ async function cardioEntries(client: Client, cache: Memo, activity?: string | nu
 
 /** Raw exam rows — only the retake-chain walk should use these directly. */
 async function allExams(client: Client, cache: Memo) {
-  return memo(cache, 'exams', async () => {
-    const { data, error } = await client
-      .from('exams')
-      .select('id, subject_id, grade, exam_date, retake_of');
-    if (error) throw error;
-    return data ?? [];
-  });
+  return memo(cache, 'exams', () =>
+    fetchAll((from, to) =>
+      client.from('exams').select('id, subject_id, grade, exam_date, retake_of').order('id').range(from, to),
+    ),
+  );
 }
 
 /**
@@ -471,14 +477,16 @@ export async function resolveMetric(
 
     case 'bodyweight':
     case 'bodyfat_pct': {
-      const rows = await memo(cache, 'body_metrics', async () => {
-        const { data, error } = await client
-          .from('body_metrics')
-          .select('recorded_at, weight_kg, bodyfat_pct')
-          .order('recorded_at');
-        if (error) throw error;
-        return data ?? [];
-      });
+      const rows = await memo(cache, 'body_metrics', () =>
+        fetchAll((from, to) =>
+          client
+            .from('body_metrics')
+            .select('recorded_at, weight_kg, bodyfat_pct')
+            .order('recorded_at')
+            .order('id')
+            .range(from, to),
+        ),
+      );
       const series = rows
         .map((r) => ({
           at: r.recorded_at,
@@ -553,14 +561,16 @@ export async function resolveMetric(
 
     case 'study_hours':
     case 'study_session_count': {
-      const rows = await memo(cache, 'study_sessions', async () => {
-        const { data, error } = await client
-          .from('study_sessions')
-          .select('subject_id, started_at, duration_seconds')
-          .order('started_at');
-        if (error) throw error;
-        return data ?? [];
-      });
+      const rows = await memo(cache, 'study_sessions', () =>
+        fetchAll((from, to) =>
+          client
+            .from('study_sessions')
+            .select('subject_id, started_at, duration_seconds')
+            .order('started_at')
+            .order('id')
+            .range(from, to),
+        ),
+      );
       const scoped = metric.subjectId
         ? rows.filter((r) => r.subject_id === metric.subjectId)
         : rows;
@@ -574,14 +584,16 @@ export async function resolveMetric(
     }
 
     case 'cards_done': {
-      const rows = await memo(cache, 'cards_done', async () => {
-        const { data, error } = await client
-          .from('roadmap_cards')
-          .select('board_id, status, done_at, updated_at')
-          .eq('status', 'done');
-        if (error) throw error;
-        return data ?? [];
-      });
+      const rows = await memo(cache, 'cards_done', () =>
+        fetchAll((from, to) =>
+          client
+            .from('roadmap_cards')
+            .select('board_id, done_at, updated_at')
+            .eq('status', 'done')
+            .order('id')
+            .range(from, to),
+        ),
+      );
       const scoped = metric.boardId ? rows.filter((r) => r.board_id === metric.boardId) : rows;
       return {
         mode,
@@ -594,14 +606,11 @@ export async function resolveMetric(
 
     case 'work_metric_value':
     case 'work_metric_total': {
-      const rows = await memo(cache, 'work_metrics', async () => {
-        const { data, error } = await client
-          .from('work_metrics')
-          .select('date, value, label')
-          .order('date');
-        if (error) throw error;
-        return data ?? [];
-      });
+      const rows = await memo(cache, 'work_metrics', () =>
+        fetchAll((from, to) =>
+          client.from('work_metrics').select('date, value, label').order('date').order('id').range(from, to),
+        ),
+      );
       const want = metric.label.toLowerCase();
       return {
         mode,
@@ -836,84 +845,22 @@ export async function seriesForGoal(client: Client, goal: Goal, cache: Memo): Pr
     }
   }
 
-  const checkins = await memo(cache, 'checkins', async () => { // one query, shared by every manual goal
-    const { data, error } = await client
-      .from('goal_checkins')
-      .select('goal_id, value, recorded_at')
-      .order('recorded_at');
-    if (error) throw error;
-    return data ?? [];
-  });
+  const checkins = await memo(cache, 'checkins', () => // one query, shared by every manual goal
+    fetchAll((from, to) =>
+      client
+        .from('goal_checkins')
+        .select('goal_id, value, recorded_at')
+        .order('recorded_at')
+        .order('id')
+        .range(from, to),
+    ),
+  );
 
   return {
     mode: 'peak',
     series: checkins
       .filter((c) => c.goal_id === goal.id)
       .map((c) => ({ at: c.recorded_at, value: c.value })),
-  };
-}
-
-/* ══ Picker options ═══════════════════════════════════════════════════════ */
-
-export interface MetricOption {
-  id: string;
-  name: string;
-}
-
-export interface MetricOptions {
-  exercises: MetricOption[];
-  subjects: MetricOption[];
-  exams: MetricOption[];
-  boards: MetricOption[];
-  /** Distinct cardio activity names, as typed. */
-  activities: string[];
-  /** Distinct work_metrics labels — the escape-hatch series. */
-  metricLabels: string[];
-}
-
-/**
- * Everything the create-goal metric picker needs to offer, in one round of
- * parallel reads. Each list degrades to empty on its own rather than failing the
- * form — a missing table should cost you one metric kind, not the whole screen.
- */
-export async function listMetricOptions(client: Client): Promise<MetricOptions> {
-  const [exercises, subjects, exams, boards, cardio, metrics] = await Promise.all([
-    client.from('exercises').select('id, name').order('name').then((r) => r.data ?? []),
-    client.from('subjects').select('id, name').order('name').then((r) => r.data ?? []),
-    client
-      .from('exams')
-      .select('id, title, exam_date, subject_id')
-      .order('exam_date', { ascending: false })
-      .then((r) => r.data ?? []),
-    client.from('work_boards').select('id, name').order('position').then((r) => r.data ?? []),
-    client.from('cardio_entries').select('activity').then((r) => r.data ?? []),
-    client.from('work_metrics').select('label').then((r) => r.data ?? []),
-  ]);
-
-  const subjectName = new Map(subjects.map((s) => [s.id, s.name]));
-  const distinct = (values: string[]) => {
-    const seen = new Map<string, string>();
-    for (const v of values) {
-      const key = v.toLowerCase();
-      if (!seen.has(key)) seen.set(key, v);
-    }
-    return [...seen.values()].sort((a, b) => a.localeCompare(b));
-  };
-
-  return {
-    exercises,
-    subjects,
-    // An exam title is optional, so fall back to subject + date — "untitled" is
-    // useless in a picker where every row has to be distinguishable.
-    exams: exams.map((e) => ({
-      id: e.id,
-      name: e.title?.trim()
-        ? `${e.title} · ${e.exam_date}`
-        : `${subjectName.get(e.subject_id) ?? 'Exam'} · ${e.exam_date}`,
-    })),
-    boards,
-    activities: distinct(cardio.map((c) => c.activity)),
-    metricLabels: distinct(metrics.map((m) => m.label)),
   };
 }
 

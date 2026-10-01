@@ -13,9 +13,9 @@ import { createClient } from '@/lib/supabase/client';
 import {
   GOAL_SECTIONS,
   setMilestoneCompleted,
-  type MetricOptions,
   type ResolvedGoal,
 } from '@/lib/queries/goals';
+import type { MetricOptions } from '@/lib/queries/goalMetricOptions';
 import { toGoalSnapshot, writeGoalSnapshot } from '@/lib/utils/goalSnapshot';
 import { GoalCard } from './GoalCard';
 import { GoalDetail } from './GoalDetail';

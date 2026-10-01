@@ -28,10 +28,13 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: do not run any logic between createServerClient and getUser().
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANT: do not run any logic between createServerClient and getClaims().
+  // getClaims verifies the JWT locally against the project's ES256 public key
+  // (fetched once, then cached), so the gate costs no Auth round trip. It still
+  // refreshes a session that is about to expire. getUser() would ask the Auth
+  // server on every request.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
 
   const { pathname } = request.nextUrl;
   const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth');

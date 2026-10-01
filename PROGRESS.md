@@ -10,6 +10,20 @@ that is the signal to archive, not to raise the cap.
 
 ## ▶ NEXT STEP
 
+**Page-load speed: continue here next session.** Done on 2026-10-01: the board loads only
+the goals it links to, goal progress needs 2 waits in a row instead of 4, and the login check is
+local (see Open threads → Boards follow-ups). Two steps were agreed and are still to do:
+1. **Section pages stop waiting for goals.** `/fitness`, `/school` and `/work` await
+   `listResolvedGoals` in their `Promise.all`, so the whole page waits for the goal strip. Load the
+   `GoalStrip` separately (an async server component inside `<Suspense>`). The catch: the strip
+   sits above the KPI tiles, so the fallback must hold its space, or the tiles jump down when it
+   arrives.
+2. **Load less history as it grows.** The resolvers in `lib/queries/goals.ts` read all
+   `workout_sessions`, all `session_sets` for an exercise, all cardio, exams and so on, with no
+   limit, so each load grows over time. Supabase also caps a query at 1,000 rows by default,
+   which would silently cut off long histories. Look at selecting less, using a DB view or RPC,
+   or paging past 1,000.
+
 **Boards — SHIPPED (2026-09-28).** All four steps are live (canvas, phases + goal links,
 phone quick-add, images); `0021` and `0022` are applied. The summary and gotchas are in
 `PROGRESS_ARCHIVE.md`. Small follow-ups are under Open threads → Boards.
@@ -48,6 +62,21 @@ manual *numeric* goal can only move its bar by ticking milestones.
   school and work ones deserve a sanity check the first time a goal binds to them.
 
 ### Boards follow-ups (small)
+- **Board load speed-up (2026-10-01, uncommitted, not yet seen in a browser).** `/boards/[id]` now
+  resolves only the goals the board links to (`lib/queries/boardGoals.ts`), streams them in
+  (`useBoardGoals`) instead of holding the canvas back, signs images right after the board
+  loads, and has its own `loading.tsx`. Check: a linked goal still glows, an achieved one lights
+  its lines, and linking a new goal in the panel shows its status without a reload.
+- **Auth check is local (2026-10-01, uncommitted).** `lib/supabase/middleware.ts` and
+  `app/(app)/layout.tsx` now use `getClaims()`. The project signs with ES256, so the JWT is
+  verified locally, removing **two** Auth round trips from every page (the layout also called
+  `getUser()`). The signed-out redirect is checked and works. Still to check: signed-in pages load,
+  and the session still refreshes after an hour idle.
+- **Goal resolution speed-up (2026-10-01, uncommitted).** In `lib/queries/goals.ts`: goals and
+  milestones load together, sets and lift sessions load together, cardio entries and dates
+  load together, and all check-ins come in one query. That's 2 waits in a row instead of 4.
+  `/goals` resolves active and achieved in one pass. Check that the goal numbers on `/goals`
+  and the section strips match what they showed before.
 - The phone bottom bar is now 6 tabs. Fine at 400 px; unchecked at 360 px.
 - Board patterns (idea = light + words, line = trace, phase = pool) are recorded only in
   `board.css` / `phase.css` headers — `DESIGN_GUIDE.md` is at its baseline and cannot grow.

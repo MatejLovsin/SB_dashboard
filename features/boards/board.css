@@ -3,7 +3,8 @@
  * idea is a point of light with its words beside it; a line is a thin trace of
  * the section's light; a phase is a pool of light, not a box; the canvas is the
  * page itself with a faint dot grid. A linked goal speaks in the goals amber:
- * a thin trace while open, a burning light once achieved — brighter than done.
+ * a glowing ring and a thin trace while open, a burning light once achieved —
+ * brighter than done.
  *
  * Everything takes its colour from the theme tokens (--accent-rgb, --foreground,
  * --muted, --border), so the board relights with the section like every other
@@ -85,6 +86,21 @@
   border-color: rgba(var(--accent-rgb), 0.9);
   box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
   transform: scale(1.15);
+}
+
+/* Linked to an open goal: the light holds a steady amber glow — at least as
+ * bright as hover, still hollow so achieved (filled, below) reads as more.
+ * Sits here, before selected and done, so those still win when they apply. */
+.idea-node[data-goal='linked'] .idea-light {
+  border-color: rgb(var(--goal-rgb));
+  box-shadow:
+    0 0 0 3px rgba(var(--goal-rgb), 0.12),
+    0 0 12px rgba(var(--goal-rgb), 0.55);
+}
+.idea-node[data-goal='linked']:hover .idea-light {
+  box-shadow:
+    0 0 0 3px rgba(var(--goal-rgb), 0.18),
+    0 0 16px rgba(var(--goal-rgb), 0.7);
 }
 
 .idea-title {

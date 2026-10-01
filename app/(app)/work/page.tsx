@@ -10,8 +10,7 @@ import { KanbanBoard } from '@/features/work/KanbanBoard';
 import { WorkCharts } from '@/features/work/WorkCharts';
 import { WorkMetricLogger } from '@/features/work/WorkMetricLogger';
 import { createClient } from '@/lib/supabase/server';
-import { GoalStrip } from '@/features/goals/GoalStrip';
-import { listResolvedGoals } from '@/lib/queries/goals';
+import { GoalStripLoader } from '@/features/goals/GoalStripLoader';
 import {
   listCards,
   listBoards,
@@ -26,12 +25,11 @@ import { BoardsFooter } from '@/features/boards/BoardsFooter';
 export default async function WorkPage() {
   const supabase = await createClient();
 
-  const [cards, boards, notes, metrics, goals] = await Promise.all([
+  const [cards, boards, notes, metrics] = await Promise.all([
     listCards(supabase),
     listBoards(supabase),
     listNotes(supabase),
     listWorkMetrics(supabase),
-    listResolvedGoals(supabase, { section: 'work', status: 'active' }).catch(() => []),
   ]);
 
   const weeklyNotes = notesPerWeek(notes);
@@ -49,7 +47,7 @@ export default async function WorkPage() {
     <div className="space-y-4">
       <PageHeader title="Work" description="Roadmap, decisions, and analytics." />
 
-      <GoalStrip goals={goals} section="work" />
+      <GoalStripLoader section="work" />
 
       {/* KPI strip — 4 tiles */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

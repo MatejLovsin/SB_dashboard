@@ -30,6 +30,9 @@ interface GoalBarProps {
   size?: 'strip' | 'full';
   /** Manual goals only — an auto goal's notches are derived, not clicked. */
   onToggle?: (id: string) => void;
+  /** Fill fraction (0–1) to draw in from instead of zero — where the bar stood
+   *  on a placeholder it replaces. Read on the first render only. */
+  drawFrom?: number;
 }
 
 export function GoalBar({
@@ -42,6 +45,7 @@ export function GoalBar({
   direction = 'up',
   size = 'full',
   onToggle,
+  drawFrom,
 }: GoalBarProps) {
   const geo = geometry({ milestones, start, target, current, best, direction });
   const strip = size === 'strip';
@@ -51,6 +55,7 @@ export function GoalBar({
   // drawn rather than a static value. The reduced-motion guard in globals.css
   // kills the transition, which lands it at the final width instantly.
   const [drawn, setDrawn] = useState(false);
+  const [startAt] = useState(() => Math.min(1, Math.max(0, drawFrom ?? 0)));
   useEffect(() => {
     const id = requestAnimationFrame(() => setDrawn(true));
     return () => cancelAnimationFrame(id);
@@ -72,7 +77,7 @@ export function GoalBar({
     flare.current = setTimeout(() => setUnlocked(null), 700);
   };
 
-  const fill = drawn ? geo.fillPct : 0;
+  const fill = drawn ? geo.fillPct : startAt;
   const done = geo.fillPct >= 1;
 
   return (

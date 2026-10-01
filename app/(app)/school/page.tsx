@@ -8,8 +8,7 @@ import { UpcomingExams } from '@/features/school/UpcomingExams';
 import { StudyTimer } from '@/features/school/StudyTimer';
 import { SchoolCharts } from '@/features/school/SchoolCharts';
 import { createClient } from '@/lib/supabase/server';
-import { GoalStrip } from '@/features/goals/GoalStrip';
-import { listResolvedGoals } from '@/lib/queries/goals';
+import { GoalStripLoader } from '@/features/goals/GoalStripLoader';
 import {
   listSubjects,
   listUpcomingExamsWithProgress,
@@ -27,11 +26,10 @@ import { BoardsFooter } from '@/features/boards/BoardsFooter';
 export default async function SchoolPage() {
   const supabase = await createClient();
 
-  const [sessions, subjects, upcomingExams, goals] = await Promise.all([
+  const [sessions, subjects, upcomingExams] = await Promise.all([
     listRecentStudySessions(supabase),
     listSubjects(supabase),
     listUpcomingExamsWithProgress(supabase),
-    listResolvedGoals(supabase, { section: 'school', status: 'active' }).catch(() => []),
   ]);
 
   const weeklyHours = weeklyStudyHoursSeries(sessions);
@@ -51,7 +49,7 @@ export default async function SchoolPage() {
     <div className="space-y-4">
       <PageHeader title="School" description="Exams, study sessions, and results." />
 
-      <GoalStrip goals={goals} section="school" />
+      <GoalStripLoader section="school" />
 
       {/* KPI strip — 4-col on desktop */}
       <div className="stagger-fade grid grid-cols-2 gap-3 lg:grid-cols-4">

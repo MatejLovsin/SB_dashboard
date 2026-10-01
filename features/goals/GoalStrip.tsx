@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { Target } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { GoalBar, fmtGoalValue } from '@/components/ui/GoalBar';
 import type { GoalSection } from '@/lib/db/types';
 import type { ResolvedGoal } from '@/lib/queries/goals';
-import { toGoalSnapshot, writeGoalSnapshot } from '@/lib/utils/goalSnapshot';
-
-const MAX_ON_HUB = 6;
+import {
+  readGoalSnapshot,
+  serverGoalSnapshot,
+  subscribeGoalSnapshot,
+  toGoalSnapshot,
+  writeGoalSnapshot,
+} from '@/lib/utils/goalSnapshot';
+import { GoalRail, MAX_ON_HUB, RAIL_ITEM } from './GoalRail';
 
 interface GoalStripProps {
   goals: ResolvedGoal[];
@@ -27,6 +31,14 @@ interface GoalStripProps {
  * up with), ordered nearest-to-done, capped so the rail can't swallow the hub.
  */
 export function GoalStrip({ goals, section }: GoalStripProps) {
+  // Where each bar stood last visit. The ghost (GoalStripGhost) drew it there,
+  // so the live bar starts from the same width and eases to today's value
+  // rather than redrawing from zero. GoalBar keeps only its first-render value,
+  // so the write below doesn't move the start point — and on a hard refresh the
+  // server snapshot is empty, which keeps hydration clean and draws from zero.
+  const stored = useSyncExternalStore(subscribeGoalSnapshot, readGoalSnapshot, serverGoalSnapshot);
+  const from = useMemo(() => new Map(stored.map((g) => [g.id, g.percent / 100])), [stored]);
+
   // Before the early return: a section that has just lost its last goal still
   // needs to clear the stale snapshot. See lib/utils/goalSnapshot.ts.
   useEffect(() => {
@@ -37,49 +49,34 @@ export function GoalStrip({ goals, section }: GoalStripProps) {
 
   const ordered = [...goals].sort((a, b) => b.percent - a.percent);
   const shown = ordered.slice(0, MAX_ON_HUB);
-  const overflow = ordered.length - shown.length;
 
   return (
-    <section>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <span className="label flex items-center gap-1.5 text-[11px] text-muted">
-          <Target className="h-3 w-3" />
-          Goals
-        </span>
-        <Link href="/goals" className="label text-[10px] text-muted transition-colors hover:text-accent">
-          {overflow > 0 ? `+${overflow} more` : 'All goals'}
+    <GoalRail overflow={ordered.length - shown.length}>
+      {shown.map(({ goal, milestones, current, best, percent, achieved }) => (
+        <Link key={goal.id} href="/goals" className={RAIL_ITEM}>
+          <Card className="panel-hover press-flash h-full cursor-pointer">
+            <div className="mb-2.5 flex items-baseline justify-between gap-2">
+              <span className="truncate text-sm font-semibold">{goal.title}</span>
+              <span className="nums shrink-0 text-sm font-bold text-accent">{percent}%</span>
+            </div>
+            <GoalBar
+              milestones={milestones}
+              start={goal.start_value}
+              target={goal.target_value}
+              current={current}
+              best={best}
+              unit={goal.unit}
+              direction={goal.direction}
+              size="strip"
+              drawFrom={from.get(goal.id)}
+            />
+            <p className="mt-1.5 truncate text-xs text-muted">
+              {/* Always a line tall, so the ghost (which can't know) matches. */}
+              {achieved ? 'Done' : current != null ? `Now ${fmtGoalValue(current)} ${goal.unit ?? ''}`.trim() : ' '}
+            </p>
+          </Card>
         </Link>
-      </div>
-
-      <div className="no-scrollbar -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible">
-        {shown.map(({ goal, milestones, current, best, percent, achieved }) => (
-          <Link
-            key={goal.id}
-            href="/goals"
-            className="w-[72%] shrink-0 snap-start sm:w-[46%] lg:w-auto"
-          >
-            <Card className="panel-hover press-flash h-full cursor-pointer">
-              <div className="mb-2.5 flex items-baseline justify-between gap-2">
-                <span className="truncate text-sm font-semibold">{goal.title}</span>
-                <span className="nums shrink-0 text-sm font-bold text-accent">{percent}%</span>
-              </div>
-              <GoalBar
-                milestones={milestones}
-                start={goal.start_value}
-                target={goal.target_value}
-                current={current}
-                best={best}
-                unit={goal.unit}
-                direction={goal.direction}
-                size="strip"
-              />
-              <p className="mt-1.5 truncate text-xs text-muted">
-                {achieved ? 'Done' : current != null ? `Now ${fmtGoalValue(current)} ${goal.unit ?? ''}`.trim() : ''}
-              </p>
-            </Card>
-          </Link>
-        ))}
-      </div>
-    </section>
+      ))}
+    </GoalRail>
   );
 }
